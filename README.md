@@ -5,24 +5,95 @@ vulnérabilités web, sous-domaines, OSINT — avec orchestration des outils Kal
 (nmap, nuclei, nikto, wafw00f, whatweb, sslscan, dnstwist, ffuf, whois, dnsrecon,
 theHarvester, subfinder, httpx) et catalogage PostgreSQL optionnel.
 
+## Installation
+
+Trois méthodes, du plus simple au plus contrôlable.
+
+### Méthode 1 — Cargo (depuis crates.io, une fois publié)
+
+```bash
+cargo install mcp_intruder
+mcp_intruder --version
+mcp_intruder example.com --no-db
+```
+
+> Le binaire s'installe dans `~/.cargo/bin/mcp_intruder`. Assure-toi que
+> `~/.cargo/bin` est dans ton `PATH` (Rustup le fait automatiquement).
+
+### Méthode 2 — Script d'installation (recommandé sur Kali/Debian)
+
+Télécharge et lance en root — il gère Rust, PostgreSQL, les outils Kali et la DB :
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/DeamonDev888/mcp-intruder-scanner/main/install.sh -o /tmp/install.sh
+sudo bash /tmp/install.sh
+```
+
+Ce que fait le script :
+
+| Étape | Action |
+|---|---|
+| 1 | Détection distro (apt/dnf/pacman) + installation des dépendances système (build-essential, libssl-dev, postgresql, dnsutils, whois, curl, ca-certificates) |
+| 2 | Vérification des outils Kali (nmap, nuclei, nikto, wafw00f, whatweb, sslscan, dnstwist, ffuf, dnsrecon, theHarvester) — non bloquant, avertit si absents |
+| 3 | Installation de Rust via rustup si absent |
+| 4 | Clone du repo dans `/opt/mcp-intruder-scanner` (ou `MCP-INTRUDER_INSTALL_DIR`) |
+| 5 | `cargo build --release` |
+| 6 | `install` du binaire dans `/usr/local/bin/mcp_intruder` + `launch.sh` → `mcp-intruder` |
+| 7 | Création et chargement du schéma PostgreSQL (12 tables) si Postgres joignable |
+| 8 | Diagnostic final via `mcp_intruder tools` |
+
+Variables d'environnement surchargeables :
+
+```bash
+MCP-INTRUDER_INSTALL_DIR=/opt/custom MCP-INTRUDER_BRANCH=main MCP-INTRUDER_DB=ma_db \
+  sudo bash /tmp/install.sh
+```
+
+### Méthode 3 — Build depuis les sources (contrôle total)
+
+```bash
+git clone https://github.com/DeamonDev888/mcp-intruder-scanner.git
+cd mcp-intruder-scanner
+cargo build --release
+
+# Binaire : ./target/release/mcp_intruder
+# TUI     : ./launch.sh
+```
+
+Prérequis manuels : Rust ≥ 1.75, libssl-dev, OpenSSL ≥ 1.1, `psql` (PostgreSQL 12+
+si tu veux l'historique), et les outils Kali sur le PATH pour les profils -2 à -5.
+
+## Prérequis
+
+| Outil | Rôle | Optionnel ? |
+|---|---|---|
+| **Rust ≥ 1.75** (rustup) | compilation du scanner | non |
+| `libssl-dev` / `openssl-devel` | wrappers TLS (`openssl s_client`) | non |
+| `curl`, `dig` (dnsutils), `whois` | modules HTTP/DNS/geo | non |
+| `psql` + PostgreSQL 12+ | catalogage des scans (12 tables) | oui |
+| `nmap` | profil `-4` et `-5` (NSE scripts) | oui |
+| `nuclei`, `nikto`, `ffuf` | profil `-3`, `-5`, `-d` | oui |
+| `wafw00f`, `whatweb`, `sslscan`, `dnstwist` | profil `-2` | oui |
+| `dnsrecon`, `theHarvester` | OSINT | oui |
+| `subfinder`, `httpx` | sous-domaines avancés | oui |
+
+Diagnostic en local : `mcp_intruder tools` (mode CLI) ou `./launch.sh --check-tools` (TUI).
+
 ## Démarrage rapide
 
 ```bash
-# Prérequis : Rust (cargo), les outils Kali optionnels sur le PATH
-cargo build --release
-
 # Scan core (DNS, ports, TLS, HTTP, sous-domaines — 100% Rust + curl/dig/openssl)
-./target/release/mcp_intruder example.com
+mcp_intruder example.com
 
 # Sortie JSON (intégration pipeline)
-./target/release/mcp_intruder example.com --no-db --json
+mcp_intruder example.com --no-db --json
 
 # Profils
 mcp_intruder example.com -2        # web : WAF + WhatWeb + SSLScan + Dnstwist
 mcp_intruder example.com -4        # infra : Nmap + SSLScan
 mcp_intruder example.com -5        # vuln : Nuclei + Nikto + Nmap
 mcp_intruder example.com -3        # 360° : tous les outils
-mcp_intruder example.com -d        # découverte : Ffuf + Nikto + WAF
+mcp_intruder example.com -d        # discovery : Ffuf + Nikto + WAF
 
 # Historique PostgreSQL
 mcp_intruder history 10
