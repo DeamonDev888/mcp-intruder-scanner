@@ -61,6 +61,23 @@ fn main() {
         }
     };
 
+    // Outils Kali REQUIS : refuser un environnement incomplet plutôt que de
+    // produire un audit partiel silencieux.
+    let missing = config::missing_required_tools();
+    if !missing.is_empty() {
+        eprintln!("╔══════════════════════════════════════════════════════════════════╗");
+        eprintln!("║  OUTILS KALI REQUIS MANQUANTS — audit complet impossible         ║");
+        eprintln!("╚══════════════════════════════════════════════════════════════════╝");
+        for (name, hint) in &missing {
+            eprintln!("  [✗] {:<14} → {}", name, hint);
+        }
+        eprintln!();
+        eprintln!("  mcp_intruder est une application Kali Linux : ces outils y sont natifs.");
+        eprintln!("  L'audit est exhaustif par défaut — pas de scan léger pour le moment.");
+        eprintln!("  Installez les outils ci-dessus, ou lancez `mcp_intruder tools` pour le diagnostic.");
+        std::process::exit(1);
+    }
+
     if !config.json_mode {
         println!(
             ">>> Lancement de l'audit approfondi MCP-Intruder pour la cible : {}",
