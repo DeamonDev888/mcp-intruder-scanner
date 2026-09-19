@@ -53,20 +53,26 @@ sudo cp launch.sh /usr/local/bin/mcp-intruder
 sudo chmod +x /usr/local/bin/mcp-intruder /usr/local/bin/mcp_intruder
 ```
 
-<details>
-<summary><b>Prérequis détaillés</b></summary>
+## ⚙️ Prérequis — outils Kali REQUIS
 
-| Outil | Rôle | Obligatoire |
-|---|---|:---:|
-| Rust ≥ 1.75 | Compilation | ✅ |
-| libssl-dev / openssl, curl, dig (dnsutils), whois | Modules core (DNS, TLS, whois) | ✅ |
-| PostgreSQL 12+ | Persistance des audits (sinon `--no-db`) | ⭕ |
-| nmap, nuclei, nikto, ffuf, wafw00f, whatweb, sslscan, dnstwist, dnsrecon, theHarvester | Wrappers profils `-2` à `-5` | ⭕ |
-| subfinder, httpx, rustscan, sqlmap | Modules opt-in (`--rustscan`, `--httpx`, `--sqli`) | ⭕ |
+L'audit MCP-Intruder est **exhaustif par défaut** : le scanner active les 14 outils Kali standards automatiquement et **refuse de démarrer** si un outil est absent — pas de scan léger silencieux pour le moment. Un environnement incomplet produirait un audit trompeur.
+
+| Outil | Installation |
+|---|---|
+| nmap, nikto, sslscan, dnsrecon, theharvester | `apt install <outil>` |
+| nuclei | `apt install nuclei` · [github.com/projectdiscovery/nuclei](https://github.com/projectdiscovery/nuclei) |
+| wafw00f | `apt install wafw00f` · `pip install wafw00f` |
+| whatweb | `apt install whatweb` · `gem install whatweb` |
+| dnstwist | `apt install dnstwist` · `pip install dnstwist` |
+| ffuf | `apt install ffuf` · [github.com/ffuf/ffuf](https://github.com/ffuf/ffuf) |
+| httpx, subfinder, rustscan | `go install github.com/projectdiscovery/httpx@latest` (idem subfinder, RustScan) |
+| obscura | Voir [Installation](#-installation) |
+
+Également requis : Rust ≥ 1.75, `openssl`, `curl`, `dig` (dnsutils), `whois`. PostgreSQL 12+ optionnel (`--no-db` sinon).
 
 Diagnostic : `mcp_intruder tools` (CLI) ou `./launch.sh --check-tools` (TUI).
 
-</details>
+> `--fast` (Core Rust uniquement) reste disponible en opt-out explicite pour les environnements restreints.
 
 ---
 
