@@ -111,16 +111,19 @@ pub(crate) fn civil_from_days(z: i64) -> (i64, u32, u32) {
 
 /// Sanitization stricte pour noms de fichiers temporaires : whitelist [a-zA-Z0-9-],
 /// tout le reste en '_' (bloque '/', '..' et tout méta-caractère de chemin).
+/// Construit « hôte[:port] » pour une URL de probe : port explicite (--ports)
+/// sinon hôte nu (les schémas http/https utilisent alors 80/443 implicites).
+pub fn host_with_port(target: &str, custom_ports: &[u16]) -> String {
+    match custom_ports.first() {
+        Some(p) => format!("{}:{}", target, p),
+        None => target.to_string(),
+    }
+}
+
 pub fn sanitize_target(s: &str) -> String {
     let cleaned: String = s
         .chars()
-        .map(|c| {
-            if c.is_ascii_alphanumeric() || c == '-' {
-                c
-            } else {
-                '_'
-            }
-        })
+        .map(|c| if c.is_ascii_alphanumeric() || c == '-' { c } else { '_' })
         .collect();
     if cleaned.is_empty() {
         "target".to_string()
@@ -132,40 +135,6 @@ pub fn sanitize_target(s: &str) -> String {
 /// Exécute un binaire avec deadline stricte : spawn, lecture des pipes dans des
 /// threads (aucun deadlock de buffer 64 Ko), kill au dépassement. stdin = /dev/null.
 /// Retourne None si le binaire est introuvable OU en timeout (kill).
-/// L'outil est-il présent et exécutable sur le PATH ?
-pub fn tool_on_path(bin: &str) -> bool {
-    if let Ok(path_var) = std::env::var("PATH") {
-        for dir in path_var.split(':') {
-            if dir.is_empty() {
-                continue;
-            }
-            let candidate = std::path::Path::new(dir).join(bin);
-            if candidate.is_file() {
-                return true;
-            }
-        }
-    }
-    false
-}
-
-/// Probe TCP connect (timeout court) — true si le port répond.
-pub fn tcp_probe(host: &str, port: u16) -> bool {
-    use std::io::Write;
-    use std::net::TcpStream;
-    let addr = format!("{}:{}", host, port);
-    let Ok(mut stream) = TcpStream::connect_timeout(
-        &addr
-            .parse()
-            .unwrap_or_else(|_| "127.0.0.1:1".parse().unwrap()),
-        std::time::Duration::from_millis(600),
-    ) else {
-        return false;
-    };
-    // certains services ne comptent "ouverts" qu'après un échange ; envoie un byte bénin
-    let _ = stream.write_all(b"\r\n");
-    true
-}
-
 pub fn run_tool(bin: &str, args: &[&str], timeout_secs: u64) -> Option<std::process::Output> {
     run_tool_env(bin, args, timeout_secs, &[])
 }
@@ -215,6 +184,9 @@ pub fn run_tool_env(
 }
 
 /// Variante avec entrée stdin (psql -f -). Le stdin est fermé après écriture (EOF).
+/// ConservÃ©e bien que le chemin DB utilise dÃ©sormais la crate postgres (sockets
+/// natives) : d'autres modules peuvent avoir besoin d'un outil stdin-fÃ©dÃ©.
+#[allow(dead_code)]
 pub fn run_tool_stdin(
     bin: &str,
     args: &[&str],
@@ -274,4 +246,23 @@ fn read_all<R: Read>(mut pipe: Option<R>) -> Vec<u8> {
         let _ = p.read_to_end(&mut buf);
     }
     buf
+}
+
+/// Découpe « host[:port] » en (host, port) — port par défaut 80 (HTTP natif).
+/// IPv6 [::1]:8080 géré. Retourne None si host vide.
+pub fn split_host_port(hostport: &str) -> Option<(String, u16)> {
+    if let Some(rest) = hostport.strip_prefix('[') {
+        let close = rest.find(']')?;
+        let host = &rest[..close];
+        let port = rest[close + 1..].strip_prefix(':')?.parse().ok()?;
+        Some((host.to_string(), port))
+    } else if let Some((h, p)) = hostport.rsplit_once(':') {
+        if let Ok(port) = p.parse::<u16>() {
+            Some((h.to_string(), port))
+        } else {
+            None
+        }
+    } else {
+        Some((hostport.to_string(), 80))
+    }
 }

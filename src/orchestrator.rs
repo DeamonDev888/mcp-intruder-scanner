@@ -4,11 +4,6 @@ use std::time::{Duration, Instant};
 
 use crate::config::Config;
 use crate::modules::brand_sec::BrandSecAuditor;
-use crate::modules::c2_empire::EmpireAuditor;
-use crate::modules::c2_havoc::HavocAuditor;
-use crate::modules::c2_merlin::MerlinAuditor;
-use crate::modules::c2_poshc2::PoshC2Auditor;
-use crate::modules::c2_sliver::SliverAuditor;
 use crate::modules::dns::DnsAuditor;
 use crate::modules::dns_hardening::DnsHardeningAuditor;
 use crate::modules::dnsrecon_audit::DnsreconAuditor;
@@ -17,23 +12,21 @@ use crate::modules::ffuf_audit::FfufAuditor;
 use crate::modules::findings::{FindingsEngine, SecurityFinding};
 use crate::modules::geo::GeoAuditor;
 use crate::modules::http::HttpAuditor;
-use crate::modules::http_probe::probe_parallel;
-use crate::modules::lateral_netexec::NetexecAuditor;
-use crate::modules::loot::LootCollector;
 use crate::modules::nikto_deep::NiktoAuditor;
 use crate::modules::nmap_deep::NmapAuditor;
 use crate::modules::nuclei_deep::NucleiAuditor;
 use crate::modules::obscura_audit::ObscuraAuditor;
 use crate::modules::ports::{PortScanner, EXTENDED_TARGET_PORTS};
-use crate::modules::portscan_rustscan::RustScanWrapper;
 use crate::modules::progress::ProgressTracker;
-use crate::modules::sqli_audit::scan_urls_parallel;
 use crate::modules::sslscan_audit::SslscanAuditor;
 use crate::modules::subdomains::SubdomainScanner;
 use crate::modules::tech_stack::TechStackAuditor;
 use crate::modules::theharvester_audit::TheHarvesterAuditor;
+use crate::modules::loot::LootCollector;
+use crate::modules::portscan_rustscan::RustScanWrapper;
+use crate::modules::http_probe::probe_parallel;
+use crate::modules::sqli_audit::scan_urls_parallel;
 use crate::modules::tls::TlsAuditor;
-use crate::modules::tunnel_chisel::ChiselAuditor;
 use crate::modules::vuln_audit::VulnAuditor;
 use crate::modules::waf::WafAuditor;
 use crate::modules::web_endpoints::WebEndpointsAuditor;
@@ -138,31 +131,6 @@ impl AuditOrchestrator {
             idx_sqlmap = Some(task_names.len());
             task_names.push("SQLMap (Injections SQL)");
         }
-        if config.tools.sliver {
-            task_names.push("Sliver (C2)");
-        }
-        if config.tools.havoc {
-            task_names.push("Havoc (C2)");
-        }
-        if config.tools.merlin {
-            task_names.push("Merlin (C2)");
-        }
-        if config.tools.poshc2 {
-            task_names.push("PoshC2 (C2)");
-        }
-        if config.tools.empire {
-            task_names.push("Empire (C2)");
-        }
-        if config.tools.chisel {
-            task_names.push("Chisel (Tunnel)");
-        }
-        if config.tools.netexec {
-            task_names.push("NetExec (Lateral)");
-        }
-
-        // Ports ouverts partagés : remplis par le scan de ports, consommés par ffuf
-        let open_ports_shared: Arc<std::sync::Mutex<Vec<u16>>> =
-            Arc::new(std::sync::Mutex::new(Vec::new()));
 
         let progress_enabled = !config.json_mode;
         let tracker = ProgressTracker::new(target, &task_names, progress_enabled);
@@ -173,18 +141,12 @@ impl AuditOrchestrator {
         let t_ports = target.clone();
         let custom_ports = config.custom_ports.clone();
         let timeout_ms = config.timeout_ms;
-        let shared_ports_for_thread = Arc::clone(&open_ports_shared);
         let handle_ports = thread::spawn(move || {
             let t0 = Instant::now();
             tracker_ports.set_running(0, "Balayage SYN/Connect des 75+ ports critiques...");
             let ports = custom_ports.as_deref().unwrap_or(EXTENDED_TARGET_PORTS);
-            let shared = shared_ports_for_thread;
             run_guarded(t0, &tracker_ports, 0, "Ports", move || {
-                let res = PortScanner::scan(&t_ports, ports, Duration::from_millis(timeout_ms));
-                if let Ok(mut v) = shared.lock() {
-                    v.extend(res.iter().filter(|p| p.is_open).map(|p| p.port));
-                }
-                res
+                PortScanner::scan(&t_ports, ports, Duration::from_millis(timeout_ms))
             })
         });
 
@@ -244,8 +206,7 @@ impl AuditOrchestrator {
             let ip_web = ip_web.clone();
             thread::spawn(move || {
                 let t0 = Instant::now();
-                tracker_web
-                    .set_running(5, "Détection des fichiers sensibles (.env, /admin, git)...");
+                tracker_web.set_running(5, "Détection des fichiers sensibles (.env, /admin, git)...");
                 run_guarded(t0, &tracker_web, 5, "Endpoints", move || {
                     WebEndpointsAuditor::audit(&t_web, &ip_web)
                 })
@@ -254,19 +215,23 @@ impl AuditOrchestrator {
 
         let tracker_http = Arc::clone(&tracker);
         let t_http = target.clone();
+        let http_ports = config.custom_ports.clone().unwrap_or_default();
         let handle_http = thread::spawn(move || {
             let t0 = Instant::now();
             tracker_http.set_running(6, "Analyse des en-têtes HTTP, HSTS, CSP & cookies...");
-            run_guarded(t0, &tracker_http, 6, "HTTP", || HttpAuditor::audit(&t_http))
+            run_guarded(t0, &tracker_http, 6, "HTTP", move || {
+                HttpAuditor::audit(&t_http, &http_ports)
+            })
         });
 
         let tracker_vuln = Arc::clone(&tracker);
         let t_vuln = target.clone();
+        let vuln_ports = config.custom_ports.clone().unwrap_or_default();
         let handle_vuln = thread::spawn(move || {
             let t0 = Instant::now();
             tracker_vuln.set_running(7, "Recherche de vulnérabilités web génériques...");
-            run_guarded(t0, &tracker_vuln, 7, "Vulnérabilités", || {
-                VulnAuditor::audit(&t_vuln)
+            run_guarded(t0, &tracker_vuln, 7, "Vulnérabilités", move || {
+                VulnAuditor::audit(&t_vuln, &vuln_ports)
             })
         });
 
@@ -300,9 +265,7 @@ impl AuditOrchestrator {
             Some(thread::spawn(move || {
                 let t0 = Instant::now();
                 tracker_c.set_running(idx, "Empreinte CMS, librairies JS & adresses emails...");
-                run_guarded(t0, &tracker_c, idx, "WhatWeb", || {
-                    TechStackAuditor::audit(&t)
-                })
+                run_guarded(t0, &tracker_c, idx, "WhatWeb", || TechStackAuditor::audit(&t))
             }))
         } else {
             None
@@ -326,47 +289,21 @@ impl AuditOrchestrator {
             Some(thread::spawn(move || {
                 let t0 = Instant::now();
                 tracker_c.set_running(idx, "Génération variantes typosquatting & phishing...");
-                run_guarded(t0, &tracker_c, idx, "Dnstwist", || {
-                    BrandSecAuditor::audit(&t)
-                })
+                run_guarded(t0, &tracker_c, idx, "Dnstwist", || BrandSecAuditor::audit(&t))
             }))
         } else {
             None
         };
 
-        // ffuf démarre après le scan de ports : il reçoit les ports réellement ouverts.
-        // Le lock est pris au spawn : le scan de ports ne prend que quelques secondes,
-        // et ffuf (90s de wordlist) est largement plus long — pas de deadlock possible.
         let handle_ffuf = if let Some(idx) = idx_ffuf {
             let tracker_c = Arc::clone(&tracker);
             let t = target.clone();
-            let shared = Arc::clone(&open_ports_shared);
-            // (le clone est fait avant le move du thread)
+            let ffuf_ports = config.custom_ports.clone().unwrap_or_default();
             Some(thread::spawn(move || {
-                // attendre que le scan de ports ait publié ses résultats (max 30 s).
-                // NB : ne JAMAIS garder le MutexGuard pendant le sleep — le scrutinee du
-                // match vit jusqu'à la fin de l'expression et affamerait le producteur
-                // (bug de starvation observé : le fill n'arrivait qu'à la fin du poll).
-                let mut ports_snapshot: Vec<u16> = Vec::new();
-                for _ in 0..150 {
-                    let snapshot = {
-                        match shared.lock() {
-                            Ok(v) if !v.is_empty() => Some(v.iter().copied().collect::<Vec<u16>>()),
-                            _ => None,
-                        }
-                    }; // guard droppé ICI, avant le sleep
-                    match snapshot {
-                        Some(p) => {
-                            ports_snapshot = p;
-                            break;
-                        }
-                        None => std::thread::sleep(Duration::from_millis(200)),
-                    }
-                }
                 let t0 = Instant::now();
                 tracker_c.set_running(idx, "Fuzzing routes sensibles via SecLists quickhits...");
-                run_guarded(t0, &tracker_c, idx, "Ffuf", || {
-                    FfufAuditor::audit(&t, &ports_snapshot)
+                run_guarded(t0, &tracker_c, idx, "Ffuf", move || {
+                    FfufAuditor::audit(&t, &ffuf_ports)
                 })
             }))
         } else {
@@ -415,9 +352,7 @@ impl AuditOrchestrator {
             Some(thread::spawn(move || {
                 let t0 = Instant::now();
                 tracker_c.set_running(idx, "Énumération DNS SRV, zone AXFR & Bind version...");
-                run_guarded(t0, &tracker_c, idx, "Dnsrecon", || {
-                    DnsreconAuditor::audit(&t)
-                })
+                run_guarded(t0, &tracker_c, idx, "Dnsrecon", || DnsreconAuditor::audit(&t))
             }))
         } else {
             None
@@ -429,9 +364,7 @@ impl AuditOrchestrator {
             Some(thread::spawn(move || {
                 let t0 = Instant::now();
                 tracker_c.set_running(idx, "Recherche OSINT emails d'employés & hôtes...");
-                run_guarded(t0, &tracker_c, idx, "theHarvester", || {
-                    TheHarvesterAuditor::audit(&t)
-                })
+                run_guarded(t0, &tracker_c, idx, "theHarvester", || TheHarvesterAuditor::audit(&t))
             }))
         } else {
             None
@@ -449,21 +382,49 @@ impl AuditOrchestrator {
             None
         };
 
-        // RustScan : balayage SYN de tous les ports (alternatif au scanner core)
+        // RustScan : balayage de TOUS les ports (65535). Si le binaire rustscan
+        // est absent, FALLBACK natif FullPortScanner (TCP connect async, pool
+        // de 128 workers) : --rustscan garantit désormais la couverture
+        // complète même sans l'outil externe.
         let handle_rustscan = if let Some(idx) = idx_rustscan {
             let tracker_c = Arc::clone(&tracker);
             let t = target.clone();
             Some(thread::spawn(move || {
                 let t0 = Instant::now();
-                tracker_c.set_running(idx, "Balayage SYN des 65535 ports...");
+                tracker_c.set_running(idx, "Balayage des 65535 ports...");
                 run_guarded(t0, &tracker_c, idx, "RustScan", || {
-                    RustScanWrapper::scan_ports(&t, 3).unwrap_or_default()
+                    // NATIF en priorité : TCP connect 128 workers, déterministe
+                    // (rustscan externe s est montré non-déterministe : ports
+                    // sautés selon les runs). Le natif couvre les 65535 en ~5 s.
+                    let start = Instant::now();
+                    let results = crate::modules::full_portscan::FullPortScanner::scan_all(
+                        &t,
+                        Duration::from_millis(1200),
+                        None::<fn(u16)>,
+                    );
+                    let mut open_ports: Vec<u16> = results.iter().map(|r| r.port).collect();
+                    let elapsed = start.elapsed().as_millis() as u64;
+                    // Secours rustscan si le natif n a rien vu mais que l hôte
+                    // répond ailleurs (parano double-check, aucun coût si vide)
+                    if open_ports.is_empty() && RustScanWrapper::is_available() {
+                        if let Ok(rs) = RustScanWrapper::scan_ports(&t, 3) {
+                            open_ports = rs.open_ports;
+                        }
+                    }
+                    crate::modules::portscan_rustscan::RustScanResult {
+                        host: t.clone(),
+                        open_ports,
+                        scan_duration_ms: elapsed,
+                        success: true,
+                    }
                 })
             }))
         } else {
             None
         };
 
+
+        let rustscan_result = handle_rustscan.map(|h| h.join().unwrap_or_default());
         // 4. Récupération des résultats Core
         let port_results = handle_ports.join().unwrap_or_default();
         let geo_result = handle_geo.join().unwrap_or_default();
@@ -480,18 +441,35 @@ impl AuditOrchestrator {
         let email_sec_result = if target.parse::<std::net::IpAddr>().is_ok() {
             EmailSecAuditor::audit_skipped_for_ip(target)
         } else {
-            run_guarded(Instant::now(), &tracker, usize::MAX, "Messagerie", || {
-                EmailSecAuditor::audit(
-                    target,
-                    dns_result.spf_record.as_deref(),
-                    dns_result.dmarc_record.as_deref(),
-                )
-            })
+            run_guarded(
+                Instant::now(),
+                &tracker,
+                usize::MAX,
+                "Messagerie",
+                || {
+                    EmailSecAuditor::audit(
+                        target,
+                        dns_result.spf_record.as_deref(),
+                        dns_result.dmarc_record.as_deref(),
+                    )
+                },
+            )
         };
 
         // 5. Exécution conditionnelle de Nmap sur les ports découverts
         let nmap_result = if let Some(idx) = idx_nmap {
-            let open_ports: Vec<u16> = port_results.iter().map(|p| p.port).collect();
+            let mut open_ports: Vec<u16> = port_results.iter().map(|p| p.port).collect();
+            // Fusion avec RustScan 65535 : les ports vus par le balayage
+            // complet alimentent aussi nmap (services sur ports exotiques).
+            if let Some(ref rs) = rustscan_result {
+                for p in &rs.open_ports {
+                    if !open_ports.contains(p) {
+                        open_ports.push(*p);
+                    }
+                }
+            }
+            open_ports.sort_unstable();
+            open_ports.dedup();
             let t0 = Instant::now();
             tracker.set_running(
                 idx,
@@ -515,34 +493,29 @@ impl AuditOrchestrator {
         let dnstwist_result = handle_dnstwist.map(|h| h.join().unwrap_or_default());
         let ffuf_result = handle_ffuf.map(|h| h.join().unwrap_or_default());
 
-        // Loot des fichiers sensibles trouvés par ffuf (opt-in via --loot)
+        // v0.3+ : Loot des fichiers sensibles trouves par ffuf (opt-in)
         let loot_result: Option<crate::modules::loot::LootResult> = if config.tools.loot {
+            // Construit la liste des URLs a looter depuis ffuf (filtrees par extension et status 200)
             let urls_to_loot: Vec<(String, String, String)> = ffuf_result
                 .as_ref()
                 .map(|r| {
                     r.endpoints
                         .iter()
-                        .filter(|e| {
-                            e.status == 200 && !LootCollector::should_skip_extension(&e.url)
-                        })
+                        .filter(|e| e.status == 200 && !LootCollector::should_skip_extension(&e.url))
                         .map(|e| (e.url.clone(), "CRITICAL".to_string(), "WEB".to_string()))
                         .collect()
                 })
                 .unwrap_or_default();
             if !urls_to_loot.is_empty() {
                 let loot_dir = "/var/lib/mcp-intruder/loot";
-                Some(LootCollector::loot_urls(
-                    0,
-                    urls_to_loot,
-                    &iso_timestamp(),
-                    loot_dir,
-                ))
+                Some(LootCollector::loot_urls(0, urls_to_loot, &iso_timestamp(), loot_dir))
             } else {
                 None
             }
         } else {
             None
         };
+
         let nuclei_result = handle_nuclei.map(|h| h.join().unwrap_or_default());
         let nikto_result = handle_nikto.map(|h| h.join().unwrap_or_default());
         let whois_result = handle_whois.map(|h| h.join().unwrap_or_default());
@@ -550,15 +523,16 @@ impl AuditOrchestrator {
         let theharvester_result = handle_theharvester.map(|h| h.join().unwrap_or_default());
         let obscura_result = handle_obscura.map(|h| h.join().unwrap_or_default());
 
-        let rustscan_result = handle_rustscan.map(|h| h.join().unwrap_or_default());
 
         // Httpx : probe séquentiel APRÈS subdomains — prober racine + tous les
         // sous-domaines découverts par subfinder (c'est là toute la valeur)
         let httpx_result = if config.tools.httpx {
             if let Some(idx) = idx_httpx {
                 let t0 = Instant::now();
-                let mut targets: Vec<String> =
-                    vec![format!("https://{}", target), format!("http://{}", target)];
+                let mut targets: Vec<String> = vec![
+                    format!("https://{}", target),
+                    format!("http://{}", target),
+                ];
                 for sub in &subdomains_result {
                     targets.push(format!("https://{}", sub.subdomain));
                     targets.push(format!("http://{}", sub.subdomain));
@@ -567,119 +541,10 @@ impl AuditOrchestrator {
                     idx,
                     &format!("Probe httpx sur {} cible(s)...", targets.len()),
                 );
-                let res = run_guarded(t0, &tracker, idx, "Httpx", || probe_parallel(targets, 40));
+                let res = run_guarded(t0, &tracker, idx, "Httpx", || {
+                    probe_parallel(targets, 40)
+                });
                 Some(res)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
-        // ===== Modules C2 / post-exploitation (opt-in) =====
-        // Ces wrappers auditent l'OUTIL local (état serveur/install) sauf NetExec
-        // qui probe la cible en null-session non-destructive. Jamais d'exploitation.
-        let idx_sliver = task_names.iter().position(|n| *n == "Sliver (C2)");
-        let idx_havoc = task_names.iter().position(|n| *n == "Havoc (C2)");
-        let idx_merlin = task_names.iter().position(|n| *n == "Merlin (C2)");
-        let idx_poshc2 = task_names.iter().position(|n| *n == "PoshC2 (C2)");
-        let idx_empire = task_names.iter().position(|n| *n == "Empire (C2)");
-        let idx_chisel = task_names.iter().position(|n| *n == "Chisel (Tunnel)");
-        let idx_netexec = task_names.iter().position(|n| *n == "NetExec (Lateral)");
-
-        let sliver_result = if config.tools.sliver {
-            if let Some(idx) = idx_sliver {
-                let t0 = Instant::now();
-                tracker.set_running(idx, "État du serveur Sliver...");
-                #[allow(clippy::redundant_closure)]
-                // closure requise : T: Default sur le resultat, pas le fn
-                let r = run_guarded(t0, &tracker, idx, "Sliver", || SliverAuditor::audit());
-                Some(r)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-        let havoc_result = if config.tools.havoc {
-            if let Some(idx) = idx_havoc {
-                let t0 = Instant::now();
-                tracker.set_running(idx, "État du teamserver Havoc...");
-                #[allow(clippy::redundant_closure)]
-                // closure requise : T: Default sur le resultat, pas le fn
-                let r = run_guarded(t0, &tracker, idx, "Havoc", || HavocAuditor::audit());
-                Some(r)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-        let merlin_result = if config.tools.merlin {
-            if let Some(idx) = idx_merlin {
-                let t0 = Instant::now();
-                tracker.set_running(idx, "État du serveur Merlin...");
-                #[allow(clippy::redundant_closure)]
-                // closure requise : T: Default sur le resultat, pas le fn
-                let r = run_guarded(t0, &tracker, idx, "Merlin", || MerlinAuditor::audit());
-                Some(r)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-        let poshc2_result = if config.tools.poshc2 {
-            if let Some(idx) = idx_poshc2 {
-                let t0 = Instant::now();
-                tracker.set_running(idx, "État du service PoshC2...");
-                #[allow(clippy::redundant_closure)]
-                // closure requise : T: Default sur le resultat, pas le fn
-                let r = run_guarded(t0, &tracker, idx, "PoshC2", || PoshC2Auditor::audit());
-                Some(r)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-        let empire_result = if config.tools.empire {
-            if let Some(idx) = idx_empire {
-                let t0 = Instant::now();
-                tracker.set_running(idx, "État du serveur Empire...");
-                #[allow(clippy::redundant_closure)]
-                // closure requise : T: Default sur le resultat, pas le fn
-                let r = run_guarded(t0, &tracker, idx, "Empire", || EmpireAuditor::audit());
-                Some(r)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-        let chisel_result = if config.tools.chisel {
-            if let Some(idx) = idx_chisel {
-                let t0 = Instant::now();
-                tracker.set_running(idx, "Démo tunnelling Chisel (localhost)...");
-                #[allow(clippy::redundant_closure)]
-                // closure requise : T: Default sur le resultat, pas le fn
-                let r = run_guarded(t0, &tracker, idx, "Chisel", || ChiselAuditor::audit());
-                Some(r)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-        let netexec_result = if config.tools.netexec {
-            if let Some(idx) = idx_netexec {
-                let t0 = Instant::now();
-                tracker.set_running(idx, "Probe SMB null-session NetExec...");
-                let t = target.clone();
-                #[allow(clippy::redundant_closure)]
-                // closure requise : T: Default sur le resultat, pas le fn
-                let r = run_guarded(t0, &tracker, idx, "NetExec", || NetexecAuditor::audit(&t));
-                Some(r)
             } else {
                 None
             }
@@ -692,13 +557,63 @@ impl AuditOrchestrator {
             if let Some(idx) = idx_sqlmap {
                 let t0 = Instant::now();
                 tracker.set_running(idx, "Injection SQL : analyse des endpoints paramétrés...");
-                let urls: Vec<String> =
-                    vec![format!("https://{}", target), format!("http://{}", target)];
-                let res = run_guarded(t0, &tracker, idx, "SQLMap", || scan_urls_parallel(urls, 60));
+                let urls: Vec<String> = vec![
+                    format!("https://{}", target),
+                    format!("http://{}", target),
+                ];
+                let res = run_guarded(t0, &tracker, idx, "SQLMap", || {
+                    scan_urls_parallel(urls, 60)
+                });
                 Some(res)
             } else {
                 None
             }
+        } else {
+            None
+        };
+
+        let mut open_ports_early: Vec<u16> = port_results.iter().map(|p| p.port).collect();
+        if let Some(ref rs) = rustscan_result {
+            for p in &rs.open_ports {
+                if !open_ports_early.contains(p) {
+                    open_ports_early.push(*p);
+                }
+            }
+        }
+        let open_smb = open_ports_early.contains(&445) || open_ports_early.contains(&139);
+
+        // Module BoxProber : probes actifs spécifiques lab/box (FTP anonymous,
+        // Redis PING, SNMP public, titres HTTP sur ports exotiques). Tourne
+        // uniquement sur cible IP, après le scan de ports.
+        let box_probe_result = if target.parse::<std::net::IpAddr>().is_ok() {
+            let open_ports: Vec<u16> = {
+                let mut v: Vec<u16> = port_results.iter().map(|p| p.port).collect();
+                if let Some(ref rs) = rustscan_result {
+                    for p in &rs.open_ports {
+                        if !v.contains(p) {
+                            v.push(*p);
+                        }
+                    }
+                }
+                v.sort_unstable();
+                v.dedup();
+                v
+            };
+            if open_ports.is_empty() {
+                None
+            } else {
+                Some(crate::modules::box_prober::BoxProber::audit(
+                    target, &open_ports,
+                ))
+            }
+        } else {
+            None
+        };
+
+        // Module SmbAuditor : énumération SAMR null-session (utilisateurs,
+        // hostname, domaine) dès que 445 est ouvert — polyvalent, pas HTB-only.
+        let smb_audit_result = if open_smb {
+            Some(crate::modules::smb_audit::SmbAuditor::audit(target))
         } else {
             None
         };
@@ -769,7 +684,7 @@ impl AuditOrchestrator {
                     findings.push(SecurityFinding {
                         severity: "INFO",
                         category: "HTTP",
-                        title: "Technologies détectées (httpx)".into(),
+                        title: "Technologies détectées (httpx)".to_string(),
                         recommendation: format!(
                             "Stack identifiée par httpx sur les {} hôte(s) vivants : {}",
                             live,
@@ -791,7 +706,7 @@ impl AuditOrchestrator {
                     findings.push(SecurityFinding {
                         severity: "MEDIUM",
                         category: "PORT",
-                        title: "Ports vus par RustScan uniquement".into(),
+                        title: "Ports vus par RustScan uniquement".to_string(),
                         recommendation: format!(
                             "Ports ouverts détectés par RustScan mais absents du scan Core (75 ports ciblés) : {}. Le scan Core passe à côté de services non standards — utiliser --rustscan pour un balayage exhaustif.",
                             diff_core.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(", ")
@@ -805,7 +720,7 @@ impl AuditOrchestrator {
                 findings.push(SecurityFinding {
                     severity: "CRITICAL",
                     category: "SQLI",
-                    title: "Injection SQL confirmée".into(),
+                    title: "Injection SQL confirmée".to_string(),
                     recommendation: format!(
                         "[SQLMap] {} paramètre '{}' ({}) — types: {} — DBMS: {}",
                         f.url,
@@ -817,27 +732,18 @@ impl AuditOrchestrator {
                 });
             }
         }
-
-        if let Some(ref sl) = sliver_result {
-            findings.extend(SliverAuditor::to_findings(sl));
+        if let Some(ref bp) = box_probe_result {
+            findings.extend(bp.findings.iter().cloned());
         }
-        if let Some(ref hv) = havoc_result {
-            findings.extend(HavocAuditor::to_findings(hv));
-        }
-        if let Some(ref me) = merlin_result {
-            findings.extend(MerlinAuditor::to_findings(me));
-        }
-        if let Some(ref po) = poshc2_result {
-            findings.extend(PoshC2Auditor::to_findings(po));
-        }
-        if let Some(ref em) = empire_result {
-            findings.extend(EmpireAuditor::to_findings(em));
-        }
-        if let Some(ref ne) = netexec_result {
-            findings.extend(NetexecAuditor::to_findings(ne));
-        }
-        if let Some(ref ch) = chisel_result {
-            findings.extend(ChiselAuditor::to_findings(ch));
+        if let Some(ref sm) = smb_audit_result {
+            for f in &sm.findings {
+                findings.push(SecurityFinding {
+                    severity: "INFO",
+                    category: "SMB",
+                    title: f.clone(),
+                    recommendation: "Voir le module SMB pour le detail utilisateur / SAMR / partage.".to_string(),
+                });
+            }
         }
 
         let duration = start_time.elapsed();
@@ -858,7 +764,6 @@ impl AuditOrchestrator {
             dns_hardening_result,
             vuln_result,
             nmap_result,
-            loot_result,
             nuclei_result,
             nikto_result,
             waf_result,
@@ -873,13 +778,9 @@ impl AuditOrchestrator {
             httpx_result,
             rustscan_result,
             sqli_result,
-            sliver_result,
-            havoc_result,
-            merlin_result,
-            poshc2_result,
-            empire_result,
-            chisel_result,
-            netexec_result,
+            loot_result,
+            box_probe_result,
+            smb_audit_result,
             findings,
         )
     }
@@ -899,6 +800,8 @@ pub(crate) fn run_guarded<T: Default, F: FnOnce() -> T>(
     match std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
         Ok(v) => {
             tracker.set_done(idx, t0.elapsed());
+
+    // v0.3+ : Loot des fichiers sensibles (--loot opt-in). Sera peuple par ffuf ci-dessous.
             v
         }
         Err(e) => {

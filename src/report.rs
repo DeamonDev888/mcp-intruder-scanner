@@ -1,21 +1,19 @@
 use crate::modules::brand_sec::BrandSecResult;
+use serde::Serialize;
 use crate::modules::dns::DnsAuditResult;
 use crate::modules::dns_hardening::DnsHardeningResult;
 use crate::modules::dnsrecon_audit::DnsreconResult;
 use crate::modules::email_sec::EmailSecurityResult;
 use crate::modules::ffuf_audit::FfufAuditResult;
 use crate::modules::findings::SecurityFinding;
+use crate::modules::loot::LootResult;
 use crate::modules::geo::GeoComplianceResult;
 use crate::modules::http::HttpAuditResult;
-use crate::modules::http_probe::HttpProbeResult;
-use crate::modules::loot::LootResult;
 use crate::modules::nikto_deep::NiktoAuditResult;
 use crate::modules::nmap_deep::NmapAuditResult;
 use crate::modules::nuclei_deep::NucleiAuditResult;
 use crate::modules::obscura_audit::ObscuraResult;
 use crate::modules::ports::PortScanResult;
-use crate::modules::portscan_rustscan::RustScanResult;
-use crate::modules::sqli_audit::SqliFinding;
 use crate::modules::sslscan_audit::SslscanResult;
 use crate::modules::subdomains::SubdomainResult;
 use crate::modules::tech_stack::TechStackResult;
@@ -25,7 +23,6 @@ use crate::modules::vuln_audit::VulnAuditResult;
 use crate::modules::waf::WafResult;
 use crate::modules::web_endpoints::WebEndpointsResult;
 use crate::modules::whois_audit::WhoisResult;
-use serde::Serialize;
 
 #[derive(Serialize)]
 pub struct FullAuditReport {
@@ -43,7 +40,6 @@ pub struct FullAuditReport {
     pub dns_hardening: DnsHardeningResult,
     pub vuln_audit: VulnAuditResult,
     pub nmap: Option<NmapAuditResult>,
-    pub loot: Option<LootResult>,
     pub nuclei: Option<NucleiAuditResult>,
     pub nikto: Option<NiktoAuditResult>,
     pub waf: Option<WafResult>,
@@ -55,17 +51,13 @@ pub struct FullAuditReport {
     pub dnsrecon: Option<DnsreconResult>,
     pub theharvester: Option<TheHarvesterResult>,
     pub obscura: Option<ObscuraResult>,
-    pub http_probe: Option<Vec<HttpProbeResult>>,
-    pub rustscan: Option<RustScanResult>,
-    pub sqli: Option<Vec<SqliFinding>>,
-    pub sliver: Option<crate::modules::c2_sliver::SliverAuditResult>,
-    pub havoc: Option<crate::modules::c2_havoc::HavocAuditResult>,
-    pub merlin: Option<crate::modules::c2_merlin::MerlinAuditResult>,
-    pub poshc2: Option<crate::modules::c2_poshc2::PoshC2AuditResult>,
-    pub empire: Option<crate::modules::c2_empire::EmpireAuditResult>,
-    pub chisel: Option<crate::modules::tunnel_chisel::ChiselAuditResult>,
-    pub netexec: Option<crate::modules::lateral_netexec::NetexecAuditResult>,
-    pub findings: Vec<SecurityFinding>,
+    pub http_probe: Option<Vec<crate::modules::http_probe::HttpProbeResult>>,
+    pub rustscan: Option<crate::modules::portscan_rustscan::RustScanResult>,
+    pub sqli: Option<Vec<crate::modules::sqli_audit::SqliFinding>>,
+    pub loot: Option<LootResult>,
+    pub box_probe: Option<crate::modules::box_prober::BoxProbeResult>,
+    pub smb_audit: Option<crate::modules::smb_audit::SmbAuditResult>,
+                pub findings: Vec<SecurityFinding>,
     pub overall_score: u8,
 }
 
@@ -86,7 +78,6 @@ impl FullAuditReport {
         dns_hardening: DnsHardeningResult,
         vuln_audit: VulnAuditResult,
         nmap: Option<NmapAuditResult>,
-        loot: Option<LootResult>,
         nuclei: Option<NucleiAuditResult>,
         nikto: Option<NiktoAuditResult>,
         waf: Option<WafResult>,
@@ -98,16 +89,12 @@ impl FullAuditReport {
         dnsrecon: Option<DnsreconResult>,
         theharvester: Option<TheHarvesterResult>,
         obscura: Option<ObscuraResult>,
-        http_probe: Option<Vec<HttpProbeResult>>,
-        rustscan: Option<RustScanResult>,
-        sqli: Option<Vec<SqliFinding>>,
-        sliver: Option<crate::modules::c2_sliver::SliverAuditResult>,
-        havoc: Option<crate::modules::c2_havoc::HavocAuditResult>,
-        merlin: Option<crate::modules::c2_merlin::MerlinAuditResult>,
-        poshc2: Option<crate::modules::c2_poshc2::PoshC2AuditResult>,
-        empire: Option<crate::modules::c2_empire::EmpireAuditResult>,
-        chisel: Option<crate::modules::tunnel_chisel::ChiselAuditResult>,
-        netexec: Option<crate::modules::lateral_netexec::NetexecAuditResult>,
+        http_probe: Option<Vec<crate::modules::http_probe::HttpProbeResult>>,
+        rustscan: Option<crate::modules::portscan_rustscan::RustScanResult>,
+        sqli: Option<Vec<crate::modules::sqli_audit::SqliFinding>>,
+        loot: Option<LootResult>,
+        box_probe: Option<crate::modules::box_prober::BoxProbeResult>,
+        smb_audit: Option<crate::modules::smb_audit::SmbAuditResult>,
         findings: Vec<SecurityFinding>,
     ) -> Self {
         let mut score: f32 = 100.0;
@@ -139,7 +126,6 @@ impl FullAuditReport {
             dns_hardening,
             vuln_audit,
             nmap,
-            loot,
             nuclei,
             nikto,
             waf,
@@ -154,13 +140,9 @@ impl FullAuditReport {
             http_probe,
             rustscan,
             sqli,
-            sliver,
-            havoc,
-            merlin,
-            poshc2,
-            empire,
-            chisel,
-            netexec,
+            loot,
+            box_probe,
+            smb_audit,
             findings,
             overall_score,
         }
@@ -170,11 +152,12 @@ impl FullAuditReport {
     /// section, appelée dans l'ordre historique — aucune ligne affichée
     /// ne change (pure motion de code).
     pub fn print_console(&self) {
-        self.print_c2_modules();
         println!(
             "================================================================================"
         );
-        println!("        MCP-INTRUDER CYBERSCAN 360° — AUDIT DE SURFACE APPROFONDI ");
+        println!(
+            "        MCP-INTRUDER CYBERSCAN 360° — AUDIT DE SURFACE APPROFONDI "
+        );
         println!(
             "================================================================================"
         );
@@ -899,73 +882,6 @@ impl FullAuditReport {
             println!();
         }
 
-        // 20. RustScan (si actif)
-        if let Some(ref rs) = self.rustscan {
-            println!("[20] BALAYAGE DE PORTS ULTRA-RAPIDE (RUSTSCAN 65535)");
-            println!(
-                "    • Statut exécution     : {}",
-                if rs.success { "SUCCÈS" } else { "ÉCHEC" }
-            );
-            println!("    • Durée du scan SYN    : {} ms", rs.scan_duration_ms);
-            if rs.open_ports.is_empty() {
-                println!("    • Ports ouverts découverts : Aucun port additionnel");
-            } else {
-                let ports_str: Vec<String> = rs.open_ports.iter().map(|p| p.to_string()).collect();
-                println!("    • Ports ouverts découverts : {}", ports_str.join(", "));
-            }
-            println!();
-        }
-
-        // 21. HTTPx (si actif)
-        if let Some(ref probes) = self.http_probe {
-            println!("[21] DÉCOUVERTE D'ENDPOINTS & PROBING HTTP (HTTPX)");
-            println!("    • Endpoints audités    : {} URLs", probes.len());
-            for p in probes.iter().take(10) {
-                let code_str = p
-                    .status_code
-                    .map(|c| c.to_string())
-                    .unwrap_or_else(|| "ERR".to_string());
-                let title = p.title.as_deref().unwrap_or("Sans titre");
-                println!("    • [{:>3}] {:<35} │ {}", code_str, p.url, title);
-                if !p.technologies.is_empty() {
-                    println!("      - Technologies       : {}", p.technologies.join(", "));
-                }
-            }
-            if probes.len() > 10 {
-                println!(
-                    "    • ... et {} autres endpoints inspectés.",
-                    probes.len() - 10
-                );
-            }
-            println!();
-        }
-
-        // 22. SQLMap (si actif)
-        if let Some(ref sqli_res) = self.sqli {
-            println!("[22] AUDIT DE VULNÉRABILITÉS INJECTIONS SQL (SQLMAP)");
-            if sqli_res.is_empty() {
-                println!(
-                    "    • Failles SQLi         : Aucune injection SQL exploitable identifiée."
-                );
-            } else {
-                for s in sqli_res {
-                    let dbms = s.dbms.as_deref().unwrap_or("Inconnu");
-                    println!(
-                        "    • [VULNÉRABLE] Paramètre '{}' sur {}",
-                        s.parameter, s.url
-                    );
-                    println!(
-                        "      - Type d'injection   : {}",
-                        s.injection_type.join(", ")
-                    );
-                    println!("      - SGBD identifié     : {}", dbms);
-                    if let Some(ref pay) = s.payload {
-                        println!("      - Payload validé     : {}", pay);
-                    }
-                }
-            }
-            println!();
-        }
     }
 
     /// [20] Constatations & recommandations d'audit
@@ -992,96 +908,15 @@ impl FullAuditReport {
         println!(
             "--------------------------------------------------------------------------------\n"
         );
-        println!(
-            "{}",
-            crate::ui::finale_banner(self.overall_score, &self.target)
-        );
-        println!(
-            "  Hygiène globale : [{}]",
-            crate::ui::score_bar(self.overall_score, 40)
-        );
+        println!();
+        println!("Score global : {}/100", self.overall_score);
         println!();
     }
 
     /// Sérialisation JSON exhaustive du rapport complet (serde_json).
-    /// [23. Modules C2 / post-exploitation] (opt-in)
-    fn print_c2_modules(&self) {
-        let mut lines: Vec<(&str, &str)> = Vec::new();
-        if let Some(ref r) = self.sliver {
-            lines.push(("Sliver", &r.summary));
-        }
-        if let Some(ref r) = self.havoc {
-            lines.push(("Havoc", &r.summary));
-        }
-        if let Some(ref r) = self.merlin {
-            lines.push(("Merlin", &r.summary));
-        }
-        if let Some(ref r) = self.poshc2 {
-            lines.push(("PoshC2", &r.summary));
-        }
-        if let Some(ref r) = self.empire {
-            lines.push(("Empire", &r.summary));
-        }
-        if let Some(ref r) = self.chisel {
-            lines.push(("Chisel", &r.summary));
-        }
-        if let Some(ref r) = self.netexec {
-            lines.push(("NetExec", &r.summary));
-        }
-        if !lines.is_empty() {
-            println!("\n── MODULES C2 / POST-EXPLOITATION ──────────────────────");
-            for (name, summary) in &lines {
-                println!("  {} : {}", name, summary);
-            }
-        }
-    }
-
-    #[cfg(test)]
-    pub fn default_for_tests() -> Self {
-        Self {
-            target: "test.local".into(),
-            timestamp: "2026-01-01T00:00:00Z".into(),
-            duration_seconds: 0.0,
-            dns: Default::default(),
-            ports: Default::default(),
-            http: Default::default(),
-            tls: Default::default(),
-            subdomains: Default::default(),
-            geo: Default::default(),
-            email_sec: Default::default(),
-            web_endpoints: Default::default(),
-            dns_hardening: Default::default(),
-            vuln_audit: Default::default(),
-            loot: None,
-            nmap: None,
-            nuclei: None,
-            nikto: None,
-            waf: None,
-            tech_stack: None,
-            sslscan: None,
-            brand_sec: None,
-            ffuf: None,
-            whois: None,
-            dnsrecon: None,
-            theharvester: None,
-            obscura: None,
-            http_probe: None,
-            rustscan: None,
-            sqli: None,
-            sliver: None,
-            havoc: None,
-            merlin: None,
-            poshc2: None,
-            empire: None,
-            chisel: None,
-            netexec: None,
-            findings: vec![],
-            overall_score: 100,
-        }
-    }
-
     pub fn to_json(&self) -> String {
-        serde_json::to_string_pretty(self)
-            .unwrap_or_else(|e| format!(r#"{{"error": "serialization failed: {}"}}"#, e))
+        serde_json::to_string_pretty(self).unwrap_or_else(|e| {
+            format!(r#"{{"error": "serialization failed: {}"}}"#, e)
+        })
     }
 }
