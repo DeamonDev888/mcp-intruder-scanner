@@ -1,0 +1,14 @@
+[package]
+name = "crate-impact"
+version = "0.2.0"
+edition = "2021"
+authors = ["Deamon <contact@example.com>"]
+description = "14 modules lecture-seule de preuve d'impact pour les findings de mcp_intruder (env expose, git dump, cles API, spoofing, subs, FTP, chainage auto)"
+license = "Apache-2.0"
+repository = "https://github.com/DeamonDev888/mcp-intruder-scanner"
+homepage = "https://github.com/DeamonDev888/mcp-intruder-scanner"
+keywords = ["security", "recon", "scanner", "exploitation", "pentest"]
+categories = ["security", "command-line-utilities"]
+readme = "README.md"
+
+[dependencies]
