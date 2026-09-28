@@ -1593,3 +1593,47 @@ fn test_lock_dnsrecon_no_duplicate_bind_versions() {
     let f = DnsreconAuditor.to_findings(&res);
     assert_eq!(f.len(), 2, "doublon (serveur, version) -> 1 seule ligne");
 }
+
+#[test]
+fn test_lock_httpx_merge_revives_subdomains() {
+    use crate::modules::http_probe::{merge_into_subdomains, HttpProbeResult};
+    use crate::modules::subdomains::SubdomainResult;
+    let mut subs = vec![
+        SubdomainResult {
+            subdomain: "bank8.example.com".into(),
+            source: "static".into(),
+            ip_address: None,
+            http_status: None,
+            is_alive: false,
+        },
+        SubdomainResult {
+            subdomain: "dead.bank8.example.com".into(),
+            source: "static".into(),
+            ip_address: None,
+            http_status: None,
+            is_alive: false,
+        },
+    ];
+    let probes = vec![HttpProbeResult {
+        url: "https://bank8.example.com".into(),
+        input_host: Some("bank8.example.com".into()),
+        ip_address: Some("106.0.62.71".into()),
+        status_code: Some(200),
+        ..Default::default()
+    }];
+    let n = merge_into_subdomains(&mut subs, &probes);
+    assert_eq!(n, 1, "un seul hote sonde vivant");
+    assert!(subs[0].is_alive);
+    assert_eq!(subs[0].http_status, Some(200));
+    assert_eq!(subs[0].ip_address.as_deref(), Some("106.0.62.71"));
+    assert!(!subs[1].is_alive, "hote non sonde reste mort");
+}
+
+#[test]
+fn test_lock_httpx_parse_one_extracts_input_host_and_ip() {
+    let line = r#"{"input":"https://www.bank8.example.com","url":"https://bank8.example.com","status_code":301,"a":["106.0.62.71"],"tech":["Nginx"]}"#;
+    let r = crate::modules::http_probe::HttpProbe::parse_one(line).expect("parse ok");
+    assert_eq!(r.input_host.as_deref(), Some("www.bank8.example.com"));
+    assert_eq!(r.ip_address.as_deref(), Some("106.0.62.71"));
+    assert_eq!(r.status_code, Some(301));
+}
