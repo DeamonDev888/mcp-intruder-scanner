@@ -1544,7 +1544,11 @@ fn test_lock_nuclei_dedup_same_template_url() {
         description: String::new(),
     };
     let result = NucleiAuditResult {
-        items: vec![item("https://a.ca/"), item("https://a.ca/"), item("https://a.ca/")],
+        items: vec![
+            item("https://a.ca/"),
+            item("https://a.ca/"),
+            item("https://a.ca/"),
+        ],
         ..Default::default()
     };
     let f: Vec<SecurityFinding> = NucleiAuditor.to_findings(&result);
@@ -1576,7 +1580,7 @@ fn test_lock_nuclei_dedup_same_template_url() {
 
 #[test]
 fn test_lock_dnsrecon_no_duplicate_bind_versions() {
-    use crate::modules::dnsrecon_audit::{DnsreconResult, DnsreconAuditor};
+    use crate::modules::dnsrecon_audit::{DnsreconAuditor, DnsreconResult};
 
     let res = DnsreconResult {
         bind_versions: vec![

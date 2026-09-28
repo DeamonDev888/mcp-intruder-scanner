@@ -96,7 +96,10 @@ mod tests {
         // dans le source (piege d'auto-detection).
         let forbidden = ["-", "t", " "].concat();
         let src = include_str!("ftpx.rs");
-        assert!(!src.to_lowercase().contains(forbidden.as_str()), "upload vers la cible interdit");
+        assert!(
+            !src.to_lowercase().contains(forbidden.as_str()),
+            "upload vers la cible interdit"
+        );
         assert!(src.contains("--ftp-pasv"));
     }
 }

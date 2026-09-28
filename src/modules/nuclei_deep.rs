@@ -171,9 +171,7 @@ impl NucleiAuditor {
                 title: if counts[&key] > 1 {
                     format!(
                         "Nuclei [{}] - {} ({} correspondances)",
-                        it.template_id,
-                        it.name,
-                        counts[&key]
+                        it.template_id, it.name, counts[&key]
                     )
                 } else {
                     format!("Nuclei [{}] - {}", it.template_id, it.name)
