@@ -1395,7 +1395,7 @@ fn test_lock_db_save_scan_atomic_and_typed() {
     // inconditionnelles), et les 2 ports du dummy doivent y etre.
     let cnt5: i64 = client
         .query_one(
-            "SELECT (SELECT count(*) FROM audit_tls_certs WHERE scan_id=$1)                     + (SELECT count(*) FROM audit_geo_compliance WHERE scan_id=$1)                     + (SELECT count(*) FROM audit_email_sec WHERE scan_id=$1)                     + (SELECT count(*) FROM audit_web_endpoints WHERE scan_id=$1)                     + (SELECT count(*) FROM audit_dns_hardening WHERE scan_id=$1)",
+            "SELECT (SELECT count(*) FROM audit_tls_certs WHERE scan_id=$1)                     + (SELECT count(*) FROM audit_geo WHERE scan_id=$1)                     + (SELECT count(*) FROM audit_email_sec WHERE scan_id=$1)                     + (SELECT count(*) FROM audit_web_endpoints WHERE scan_id=$1)                     + (SELECT count(*) FROM audit_dns_hardening WHERE scan_id=$1)",
             &[&scan_id],
         )
         .unwrap()
