@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 
 use crate::config::Config;
 use crate::modules::brand_sec::BrandSecAuditor;
+use crate::modules::ftp_audit::FtpAuditor;
 use crate::modules::dns::DnsAuditor;
 use crate::modules::dns_hardening::DnsHardeningAuditor;
 use crate::modules::dnsrecon_audit::DnsreconAuditor;
@@ -435,6 +436,13 @@ impl AuditOrchestrator {
         let rustscan_result = handle_rustscan.map(|h| h.join().unwrap_or_default());
         // 4. Récupération des résultats Core
         let mut port_results = handle_ports.join().unwrap_or_default();
+        // FTP audit (ftpx + ftplx) : declenche uniquement si port 21 detecte.
+        // Synchrone : le module est rapide (~10s max). Aucun thread supplementaire.
+        let ftp_audit_result = if FtpAuditor::should_audit(target, &port_results) {
+            Some(FtpAuditor::audit(target))
+        } else {
+            None
+        };
         // Fusion RustScan -> Core : les ports vus uniquement par le balayage
         // 65535 doivent finir dans le rapport [5], audit_ports ET
         // open_ports_count (bug scan #269 : 30 ouverts, 11 en DB).
@@ -682,6 +690,9 @@ impl AuditOrchestrator {
         if let Some(ref bs) = dnstwist_result {
             findings.extend(BrandSecAuditor.to_findings(bs));
         }
+        if let Some(ref ftp) = ftp_audit_result {
+            findings.extend(FtpAuditor.to_findings(ftp));
+        }
         if let Some(ref ff) = ffuf_result {
             findings.extend(FfufAuditor.to_findings(ff));
         }
@@ -797,6 +808,7 @@ impl AuditOrchestrator {
             whatweb_result,
             sslscan_result,
             dnstwist_result,
+            ftp_audit_result,
             ffuf_result,
             whois_result,
             dnsrecon_result,

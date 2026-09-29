@@ -1,4 +1,5 @@
 use crate::modules::brand_sec::BrandSecResult;
+use crate::modules::ftp_audit::FtpAuditResult;
 use crate::modules::dns::DnsAuditResult;
 use crate::modules::dns_hardening::DnsHardeningResult;
 use crate::modules::dnsrecon_audit::DnsreconResult;
@@ -46,6 +47,7 @@ pub struct FullAuditReport {
     pub tech_stack: Option<TechStackResult>,
     pub sslscan: Option<SslscanResult>,
     pub brand_sec: Option<BrandSecResult>,
+    pub ftp_audit: Option<FtpAuditResult>,
     pub ffuf: Option<FfufAuditResult>,
     pub whois: Option<WhoisResult>,
     pub dnsrecon: Option<DnsreconResult>,
@@ -84,6 +86,7 @@ impl FullAuditReport {
         tech_stack: Option<TechStackResult>,
         sslscan: Option<SslscanResult>,
         brand_sec: Option<BrandSecResult>,
+        ftp_audit: Option<FtpAuditResult>,
         ffuf: Option<FfufAuditResult>,
         whois: Option<WhoisResult>,
         dnsrecon: Option<DnsreconResult>,
@@ -132,6 +135,7 @@ impl FullAuditReport {
             tech_stack,
             sslscan,
             brand_sec,
+            ftp_audit,
             ffuf,
             whois,
             dnsrecon,
@@ -179,6 +183,7 @@ impl FullAuditReport {
         self.print_tech_stack_section();
         self.print_tls_section();
         self.print_brand_sec_section();
+        self.print_ftp_audit_section();
         self.print_ffuf_section();
         self.print_subdomains_section();
         self.print_vuln_section();
@@ -915,4 +920,20 @@ impl FullAuditReport {
         serde_json::to_string_pretty(self)
             .unwrap_or_else(|e| format!(r#"{{"error": "serialization failed: {}"}}"#, e))
     }
+
+    /// [9b] Audit FTP (port 21)
+    fn print_ftp_audit_section(&self) {
+        if let Some(ref f) = self.ftp_audit {
+            println!("[9b] AUDIT FTP (port 21)");
+            println!("    • Cible                : {}", f.target);
+            println!("    • Banner               : {}", if f.banner.is_empty() { "(aucun)".into() } else { f.banner.clone() });
+            println!("    • TLS supporté         : {}", if f.tls_supported { "OUI" } else { "NON" });
+            println!("    • TLS exigé            : {}", if f.tls_required { "OUI [OK]" } else { "NON [RISQUE]" });
+            println!("    • Anonymous FTP        : {}", if f.anonymous_allowed { "AUTORISÉ [CRITIQUE]" } else { "REFUSÉ" });
+            println!("    • Loot attempté        : {}", if f.loot_attempted { format!("OUI ({} fichier(s))", f.loot_files) } else { "non".into() });
+            println!("    • Verdict              : {}", f.summary);
+            println!();
+        }
 }
+
+    }

@@ -842,6 +842,7 @@ fn create_dummy_report(findings: Vec<SecurityFinding>) -> FullAuditReport {
         None,
         None,
         None,
+        None, // ftp_audit
         None,
         None,
         None, // http_probe
