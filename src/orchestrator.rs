@@ -555,6 +555,9 @@ impl AuditOrchestrator {
         let nikto_result = handle_nikto.map(|h| h.join().unwrap_or_default());
         let whois_result = handle_whois.map(|h| h.join().unwrap_or_default());
         let dnsrecon_result = handle_dnsrecon.map(|h| h.join().unwrap_or_default());
+        // crt.sh (Certificate Transparency) : passif, 1 requete, tourne meme
+        // sans module actif -- sous-domaines historiques invisibles ailleurs.
+        let crt_sh_result = crate::modules::crt_sh::CrtShAuditor::audit(target);
         let theharvester_result = handle_theharvester.map(|h| h.join().unwrap_or_default());
         let obscura_result = handle_obscura.map(|h| h.join().unwrap_or_default());
 
@@ -581,6 +584,37 @@ impl AuditOrchestrator {
         } else {
             None
         };
+
+        // Fusion dnsrecon -> sous-domaines : les A-records des hotes du
+        // domaine (ftp./whm./autoconfig.) enrichissent la cartographie.
+        if let Some(ref dr) = dnsrecon_result {
+            for (host, ip) in &dr.host_records {
+                if let Some(sub) = subdomains_result
+                    .iter_mut()
+                    .find(|s| s.subdomain.eq_ignore_ascii_case(host))
+                {
+                    if sub.ip_address.is_none() {
+                        sub.ip_address = Some(ip.clone());
+                    }
+                } else {
+                    subdomains_result.push(crate::modules::subdomains::SubdomainResult {
+                        subdomain: host.clone(),
+                        source: "dnsrecon".into(),
+                        ip_address: Some(ip.clone()),
+                        http_status: None,
+                        is_alive: false,
+                    });
+                }
+            }
+        }
+        // Fusion crt.sh -> sous-domaines : les hotes historiques (certs CT)
+        // sont ajoutes s'ils ne sont pas deja connus (source = crt.sh).
+        let crt_added = crate::modules::crt_sh::CrtShAuditor::merge_into(&mut subdomains_result, &crt_sh_result);
+        if crt_added > 0 {
+            println!(
+                ">>> [CRT.SH] {crt_added} sous-domaine(s) historique(s) ajouté(s) via Certificate Transparency"
+            );
+        }
 
         // Fusion httpx -> sous-domaines : un hôte sondé vivant ne doit plus
         // jamais ressortir muet dans le rapport ni en base (bug scan #269).

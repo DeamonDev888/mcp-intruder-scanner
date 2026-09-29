@@ -1678,3 +1678,43 @@ fn test_lock_rustscan_only_ports_merged_into_core_results() {
     }
     assert_eq!(port_results.len(), 5, "idempotent : pas de doublon");
 }
+
+
+#[test]
+fn test_lock_dnsrecon_host_records_fusion_dedup() {
+    // Lecons bank8.example.com : ftp./whm./autoconfig. fusionnes sans doublon,
+    // l'IP d'un hote existant n'est JAMAIS ecrasee.
+    use crate::modules::subdomains::SubdomainResult;
+    let host_records = vec![
+        ("ftp.bank8.example.com".to_string(), "106.0.62.71".to_string()),
+        ("whm.bank8.example.com".to_string(), "106.0.62.71".to_string()),
+        ("www.bank8.example.com".to_string(), "106.0.62.71".to_string()),
+    ];
+    let mut subs = vec![SubdomainResult {
+        subdomain: "www.bank8.example.com".into(),
+        source: "subfinder".into(),
+        ip_address: Some("OLD_IP".into()),
+        http_status: Some(200),
+        is_alive: true,
+    }];
+    for (host, ip) in &host_records {
+        if let Some(sub) = subs.iter_mut().find(|s| s.subdomain.eq_ignore_ascii_case(host)) {
+            if sub.ip_address.is_none() {
+                sub.ip_address = Some(ip.clone());
+            }
+        } else {
+            subs.push(SubdomainResult {
+                subdomain: host.clone(),
+                source: "dnsrecon".into(),
+                ip_address: Some(ip.clone()),
+                http_status: None,
+                is_alive: false,
+            });
+        }
+    }
+    assert_eq!(subs.len(), 3, "www existant + ftp + whm");
+    let www = subs.iter().find(|s| s.subdomain == "www.bank8.example.com").unwrap();
+    assert_eq!(www.ip_address.as_deref(), Some("OLD_IP"), "IP existante preservee");
+    assert!(www.is_alive, "donnees vivantes preservees");
+    assert!(subs.iter().any(|s| s.subdomain == "ftp.bank8.example.com" && s.ip_address.as_deref() == Some("106.0.62.71")));
+}

@@ -1,5 +1,6 @@
 pub mod box_prober;
 pub mod brand_sec;
+pub mod crt_sh;
 pub mod db;
 pub mod dns;
 pub mod dns_hardening;
