@@ -434,7 +434,25 @@ impl AuditOrchestrator {
 
         let rustscan_result = handle_rustscan.map(|h| h.join().unwrap_or_default());
         // 4. Récupération des résultats Core
-        let port_results = handle_ports.join().unwrap_or_default();
+        let mut port_results = handle_ports.join().unwrap_or_default();
+        // Fusion RustScan -> Core : les ports vus uniquement par le balayage
+        // 65535 doivent finir dans le rapport [5], audit_ports ET
+        // open_ports_count (bug scan #269 : 30 ouverts, 11 en DB).
+        if let Some(ref rs) = rustscan_result {
+            if rs.success {
+                for p in &rs.open_ports {
+                    if !port_results.iter().any(|cp| cp.port == *p) {
+                        port_results.push(crate::modules::ports::PortScanResult {
+                            port: *p,
+                            is_open: true,
+                            service_hint: crate::modules::ports::PortScanner::guess_service(*p),
+                            banner: None,
+                        });
+                    }
+                }
+                port_results.sort_unstable_by_key(|p| p.port);
+            }
+        }
         let geo_result = handle_geo.join().unwrap_or_default();
         let tls_result = handle_tls.join().unwrap_or_default();
         let dns_result = handle_dns.join().unwrap_or_default();

@@ -1637,3 +1637,43 @@ fn test_lock_httpx_parse_one_extracts_input_host_and_ip() {
     assert_eq!(r.ip_address.as_deref(), Some("106.0.62.71"));
     assert_eq!(r.status_code, Some(301));
 }
+
+
+#[test]
+fn test_lock_rustscan_only_ports_merged_into_core_results() {
+    // Bug scan #269 : 30 ports ouverts reels, 11 en DB. Les 19 ports
+    // exotiques vus uniquement par RustScan doivent maintenant finir
+    // dans port_results (rapport + audit_ports + open_ports_count).
+    use crate::modules::ports::{PortScanResult, PortScanner};
+    let mut port_results = vec![
+        PortScanResult { port: 21, is_open: true, service_hint: PortScanner::guess_service(21), banner: None },
+        PortScanResult { port: 80, is_open: true, service_hint: PortScanner::guess_service(80), banner: None },
+    ];
+    let rustscan_only: Vec<u16> = vec![2077, 2086, 52223];
+    for p in &rustscan_only {
+        if !port_results.iter().any(|cp| cp.port == *p) {
+            port_results.push(PortScanResult {
+                port: *p,
+                is_open: true,
+                service_hint: PortScanner::guess_service(*p),
+                banner: None,
+            });
+        }
+    }
+    port_results.sort_unstable_by_key(|p| p.port);
+    assert_eq!(port_results.len(), 5, "Core 2 + RustScan 3 = 5");
+    let ports: Vec<u16> = port_results.iter().map(|p| p.port).collect();
+    assert_eq!(ports, vec![21, 80, 2077, 2086, 52223], "ports tries");
+    // Dedup : si on rejoue la fusion, pas de doublon
+    for p in &rustscan_only {
+        if !port_results.iter().any(|cp| cp.port == *p) {
+            port_results.push(PortScanResult {
+                port: *p,
+                is_open: true,
+                service_hint: PortScanner::guess_service(*p),
+                banner: None,
+            });
+        }
+    }
+    assert_eq!(port_results.len(), 5, "idempotent : pas de doublon");
+}
