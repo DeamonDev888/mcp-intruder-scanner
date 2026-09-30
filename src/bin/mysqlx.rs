@@ -5,7 +5,7 @@
 //! envoyée, AUCUNE requête protocole. Verdicts :
 //!   - MYSQL_EXPOSE_PUBLIC   : greeting mysqld reçu (version divulgée)
 //!   - MYSQL_ACL_REFUS       : greeting + ERR 1130 « Host not allowed »
-//!                             (service réel, accès filtré par ACL IP)
+//!     (service réel, accès filtré par ACL IP)
 //!   - MYSQL_EDGE_FANTOME    : réponse HTTP ou silence = pas un mysqld
 //!   - MYSQL_INJOIGNABLE
 //!
@@ -51,7 +51,6 @@ fn parse_mysql_greeting(data: &[u8]) -> Option<(u8, String)> {
     if data.len() < 5 {
         return None;
     }
-    let len = u32::from(data[0]) | (u32::from(data[1]) << 8) | (u32::from(data[2]) << 16);
     let proto = data[4];
     // proto 8 (MySQL 3.23-4.0), 9 (4.1+), 10 (5.x/8.x) — hors plage = pas mysqld
     // On exige juste que le buffer puisse contenir au moins la version.
@@ -145,19 +144,41 @@ fn redact_ips(s: &str) -> String {
 use std::net::ToSocketAddrs;
 
 
+
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() < 2 {
+        eprintln!("usage: mysqlx <hote>  (preuve d'exposition MySQL :3306, lecture seule)");
+        std::process::exit(2);
+    }
+    let host = &args[1];
+    let (verdict, detail, evidence) = probe(host);
+    println!("hôte     : {host}");
+    println!("verdict  : {verdict}");
+    println!("détail   : {detail}");
+    if !evidence.is_empty() {
+        println!("preuve   : {evidence}");
+    }
+    save_verdict("mysqlx", host, &verdict, &detail, &evidence);
+    let code = match verdict.as_str() {
+        "MYSQL_EXPOSE_PUBLIC" => 0,
+        "MYSQL_ACL_REFUS" => 0,
+        _ => 1,
+    };
+    std::process::exit(code);
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    // Fixture reelle : ERR packet capture sur example.org:3306
-    // hex: 56000000ff6a04486f737420273135372d3230382d32352d31382e6d632e6465727974656c652e636f6d...
-    // Soit len=0x56=86, seq=0x00, 0xff=ERR, 1130=ER_HOST_NOT_PRIVILEGED, sqlstate=HY000
-    const ERR_1130_FIXTURE: &[u8] = &[
+    // Greeting mysqld 5.x : len=0x32, seq=0, proto=10, version\0, ...
+    #[allow(dead_code)]
+    const _ERR_PACKET_1130: &[u8] = &[
         0x56, 0x00, 0x00, 0x00, 0xff, 0x6a, 0x04, 0x23,
         0x48, 0x59, 0x30, 0x30, 0x30, b' ', 0, 0,
     ];
-
-    // Greeting mysqld 5.x : len=0x32, seq=0, proto=10, version\0, ...
     const GREETING_FIXTURE: &[u8] = &[
         0x32, 0x00, 0x00, 0x00, 0x0a, b'5', b'.', b'7', b'.', b'2', b'2', 0x00, 0, 0,
     ];
@@ -185,27 +206,4 @@ mod tests {
         assert_eq!(mask_version("10.11.4-MariaDB-1:10.11.4"), "10.11.x");
         assert_eq!(mask_version("single"), "x.x");
     }
-}
-
-fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() < 2 {
-        eprintln!("usage: mysqlx <hote>  (preuve d'exposition MySQL :3306, lecture seule)");
-        std::process::exit(2);
-    }
-    let host = &args[1];
-    let (verdict, detail, evidence) = probe(host);
-    println!("hôte     : {host}");
-    println!("verdict  : {verdict}");
-    println!("détail   : {detail}");
-    if !evidence.is_empty() {
-        println!("preuve   : {evidence}");
-    }
-    save_verdict("mysqlx", host, &verdict, &detail, &evidence);
-    let code = match verdict.as_str() {
-        "MYSQL_EXPOSE_PUBLIC" => 0,
-        "MYSQL_ACL_REFUS" => 0,
-        _ => 1,
-    };
-    std::process::exit(code);
 }
