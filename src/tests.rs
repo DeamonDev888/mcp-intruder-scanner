@@ -223,25 +223,29 @@ fn test_port_scan_deduplication() {
             is_open: true,
             service_hint: "HTTP",
             banner: None,
-        },
+
+            is_phantom_edge: false,        },
         PortScanResult {
             port: 8443,
             is_open: true,
             service_hint: "HTTPS Alt",
             banner: None,
-        },
+
+            is_phantom_edge: false,        },
         PortScanResult {
             port: 8443,
             is_open: true,
             service_hint: "HTTPS Alt",
             banner: None,
-        },
+
+            is_phantom_edge: false,        },
         PortScanResult {
             port: 443,
             is_open: true,
             service_hint: "HTTPS",
             banner: None,
-        },
+
+            is_phantom_edge: false,        },
     ];
 
     results.sort_by_key(|r| r.port);
@@ -365,7 +369,8 @@ fn test_findings_engine_evaluates_telnet_and_open_resolver() {
         is_open: true,
         service_hint: "Telnet",
         banner: None,
-    }];
+
+        is_phantom_edge: false,    }];
     let http = HttpAuditResult {
         target_url: "https://test.com".into(),
         http_status: 200,
@@ -703,13 +708,15 @@ fn create_dummy_report(findings: Vec<SecurityFinding>) -> FullAuditReport {
                 is_open: true,
                 service_hint: "HTTP",
                 banner: None,
-            },
+
+                is_phantom_edge: false,            },
             PortScanResult {
                 port: 443,
                 is_open: true,
                 service_hint: "HTTPS",
                 banner: None,
-            },
+
+                is_phantom_edge: false,            },
         ],
         HttpAuditResult {
             target_url: "https://test-target.ca".into(),
@@ -1616,8 +1623,8 @@ fn test_lock_rustscan_only_ports_merged_into_core_results() {
     // dans port_results (rapport + audit_ports + open_ports_count).
     use crate::modules::ports::{PortScanResult, PortScanner};
     let mut port_results = vec![
-        PortScanResult { port: 21, is_open: true, service_hint: PortScanner::guess_service(21), banner: None },
-        PortScanResult { port: 80, is_open: true, service_hint: PortScanner::guess_service(80), banner: None },
+        PortScanResult { port: 21, is_open: true, service_hint: PortScanner::guess_service(21), banner: None, is_phantom_edge: false },
+        PortScanResult { port: 80, is_open: true, service_hint: PortScanner::guess_service(80), banner: None, is_phantom_edge: false },
     ];
     let rustscan_only: Vec<u16> = vec![2077, 2086, 52223];
     for p in &rustscan_only {
@@ -1627,7 +1634,8 @@ fn test_lock_rustscan_only_ports_merged_into_core_results() {
                 is_open: true,
                 service_hint: PortScanner::guess_service(*p),
                 banner: None,
-            });
+
+                is_phantom_edge: false,            });
         }
     }
     port_results.sort_unstable_by_key(|p| p.port);
@@ -1642,7 +1650,8 @@ fn test_lock_rustscan_only_ports_merged_into_core_results() {
                 is_open: true,
                 service_hint: PortScanner::guess_service(*p),
                 banner: None,
-            });
+
+                is_phantom_edge: false,            });
         }
     }
     assert_eq!(port_results.len(), 5, "idempotent : pas de doublon");

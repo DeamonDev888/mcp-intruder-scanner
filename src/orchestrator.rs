@@ -460,10 +460,16 @@ impl AuditOrchestrator {
                             is_open: true,
                             service_hint: crate::modules::ports::PortScanner::guess_service(*p),
                             banner: None,
+                            is_phantom_edge: false,
                         });
                     }
                 }
                 port_results.sort_unstable_by_key(|p| p.port);
+                // Re-applique la detection edge-uniforme sur l'ensemble fusionne
+                // (core + rustscan) : les ports vus par rustscan seul n'ont pas
+                // ete sonde par le litmus, mais un edge deja confirme les
+                // couvre aussi (port non web muet = artefact).
+                crate::modules::ports::PortScanner::detect_uniform_edge(&mut port_results);
             }
         }
         let geo_result = handle_geo.join().unwrap_or_default();

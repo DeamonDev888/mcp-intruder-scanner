@@ -214,7 +214,7 @@ mod tests {
     use crate::modules::ports::PortScanResult;
 
     fn port(p: u16) -> PortScanResult {
-        PortScanResult { port: p, is_open: true, service_hint: "x", banner: None }
+        PortScanResult { port: p, is_open: true, service_hint: "x", banner: None, is_phantom_edge: false }
     }
 
     #[test]
