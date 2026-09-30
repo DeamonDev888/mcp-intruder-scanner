@@ -4,6 +4,16 @@ Toutes les modifications notables de `mcp_intruder` sont documentées ici.
 
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.5.3] — 2026-09-29
+
+### Added
+- **Capture des versions WhatWeb** : le parseur whatweb est réécrit en `serde_json` (fin du parseur à la main find/brace-counting) et capture désormais `plugin + version` par composant (`version[]` canonique, sinon `string[]` au motif `produit/version`). Les nombres isolés type `max-age=31536000` ne sont jamais pris pour une version.
+- **Table `audit_tech`** : chaque composant versionné est persisté (`scan_id, name, version, source, is_eol, branch_min`) avec `ON DELETE CASCADE`, index dédié, écriture dans `save_scan` et purge dans `cleanup_scan`.
+- **Verdicts « version obsolète »** : base de seuils EOL par branche (majeur.mineur) couvrant serveurs web, langages, CMS, bases de données, frameworks JS/backend, services exposés (~50 entrées). Une branche inférieure au seuil minimal maintenu produit un finding MEDIUM « Composant obsolète » + affichage console dédié (section empreinte technologique). Patch-lag sur une branche maintenue ≠ EOL : aucun verdict (zéro invention).
+
+### Fixed
+- **Test FTP préexistant en échec** : `test_lock_ftp_no_finding_when_tls_required` échouait sur HEAD (bannière `Pure-FTPd [privsep] [TLS]` signalée « divulgation de version » sans contenir de version). Le finding LOW exige désormais un chiffre dans la bannière (`vsftpd 3.0.5` → LOW ; `Pure-FTPd [TLS]` → rien).
+
 ## [0.5.1] — 2026-09-28
 
 ### Fixed

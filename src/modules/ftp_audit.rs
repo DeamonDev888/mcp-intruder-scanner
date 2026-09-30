@@ -191,6 +191,7 @@ impl FtpAuditor {
         if !res.banner.is_empty()
             && !res.anonymous_allowed
             && !res.auth_cleartext_forced
+            && res.banner.chars().any(|c| c.is_ascii_digit())
             && (res.banner.contains("Pure-FTPd")
                 || res.banner.contains("vsftpd")
                 || res.banner.contains("ProFTPD"))

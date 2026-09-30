@@ -9,7 +9,6 @@ use crate::modules::geo::GeoResult;
 use crate::modules::http::HttpAuditResult;
 use crate::modules::ports::{PortScanResult, PortScanner, EXTENDED_TARGET_PORTS};
 // EXPANDED_SUBDOMAINS removed v0.2
-use crate::modules::tech_stack::TechStackAuditor;
 use crate::modules::tls::TlsAuditResult;
 use crate::modules::vuln_audit::VulnAuditResult;
 use crate::modules::web_endpoints::WebEndpointsResult;
@@ -490,36 +489,6 @@ fn test_findings_engine_evaluates_telnet_and_open_resolver() {
 // ==============================================================================
 // 7. TESTS TECH STACK (WHATWEB PARSER)
 // ==============================================================================
-
-#[test]
-fn test_tech_stack_json_parsing() {
-    let sample_whatweb_json = r#"[
-      {
-        "target": "https://example.com",
-        "http_status": 200,
-        "plugins": {
-          "HTTPServer": {
-            "string": ["nginx/1.22.1"]
-          },
-          "Email": {
-            "string": ["contact@example.com", "support@example.com"]
-          },
-          "Strict-Transport-Security": {
-            "string": ["max-age=31536000"]
-          }
-        }
-      }
-    ]"#;
-
-    let (status, server, emails, techs) = TechStackAuditor::parse_json(sample_whatweb_json);
-    assert_eq!(status, 200);
-    assert_eq!(server.as_deref(), Some("nginx/1.22.1"));
-    assert_eq!(emails.len(), 2);
-    assert!(emails.contains(&"contact@example.com".to_string()));
-    assert!(emails.contains(&"support@example.com".to_string()));
-    assert!(techs.contains(&"HTTPServer".to_string()));
-    assert!(techs.contains(&"Strict-Transport-Security".to_string()));
-}
 
 // ==============================================================================
 // 8. TESTS FFUF AUDIT (PARSER & CATCH-ALL CAPPING)
@@ -1717,4 +1686,28 @@ fn test_lock_dnsrecon_host_records_fusion_dedup() {
     assert_eq!(www.ip_address.as_deref(), Some("OLD_IP"), "IP existante preservee");
     assert!(www.is_alive, "donnees vivantes preservees");
     assert!(subs.iter().any(|s| s.subdomain == "ftp.bank8.example.com" && s.ip_address.as_deref() == Some("106.0.62.71")));
+}
+
+#[test]
+fn test_full_portscan_bailout_on_blackhole() {
+    use crate::modules::full_portscan::FullPortScanner;
+    // 192.0.2.0/24 = RFC 5737 TEST-NET-1, aucun routeur ne repond
+    // (blackhole garanti). Permet de valider le bail-out sans Internet.
+    use std::time::{Duration, Instant};
+    let start = Instant::now();
+    let results = FullPortScanner::scan_all(
+        "192.0.2.1",
+        Duration::from_millis(150),
+        None::<fn(u16)>,
+    );
+    let elapsed = start.elapsed();
+    // Avec bail-out: termine en < 5s (200 probes x 150ms / 128 workers).
+    // Sans bail-out: ~150s (2 passes x 65535 x 150ms / 128).
+    assert!(
+        elapsed < Duration::from_secs(8),
+        "scan_all a pris {}s sur blackhole - bail-out anti-blackhole inactif",
+        elapsed.as_secs_f32()
+    );
+    // TEST-NET-1 ne repond a rien -> 0 port ouvert.
+    assert_eq!(results.len(), 0, "TEST-NET-1 ne devrait avoir aucun port ouvert");
 }

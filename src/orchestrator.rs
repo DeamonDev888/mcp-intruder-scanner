@@ -261,14 +261,16 @@ impl AuditOrchestrator {
             None
         };
 
+        let ww_ports = config.custom_ports.clone().unwrap_or_default();
         let handle_whatweb = if let Some(idx) = idx_whatweb {
             let tracker_c = Arc::clone(&tracker);
             let t = target.clone();
+            let ww_ports = ww_ports.clone();
             Some(thread::spawn(move || {
                 let t0 = Instant::now();
                 tracker_c.set_running(idx, "Empreinte CMS, librairies JS & adresses emails...");
                 run_guarded(t0, &tracker_c, idx, "WhatWeb", || {
-                    TechStackAuditor::audit(&t)
+                    TechStackAuditor::audit(&t, &ww_ports)
                 })
             }))
         } else {

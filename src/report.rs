@@ -471,6 +471,23 @@ impl FullAuditReport {
                     tw.detected_technologies.join(", ")
                 }
             );
+            if !tw.versioned.is_empty() {
+                println!("    • Composants versionnés :");
+                for c in &tw.versioned {
+                    println!("        - {} {}", c.name, c.version);
+                }
+                let verdicts =
+                    crate::modules::tech_stack::TechStackAuditor::version_verdicts(&tw.versioned);
+                if !verdicts.is_empty() {
+                    println!("    • Branches non maintenues (EOL) :");
+                    for v in verdicts {
+                        println!(
+                            "        ! {} {} < {} — {}",
+                            v.name, v.detected, v.branch_min, v.recommendation
+                        );
+                    }
+                }
+            }
             if !tw.emails_exposed.is_empty() {
                 println!(
                     "    • Courriels repérés    : {}",

@@ -369,6 +369,26 @@ impl DatabaseManager {
                 &ts.summary,
                 &ts.raw_output,
             )?;
+            // Composants versionnés -> audit_tech (verdict EOL calculé par le module)
+            let verdicts = crate::modules::tech_stack::TechStackAuditor::version_verdicts(
+                &ts.versioned,
+            );
+            for comp in &ts.versioned {
+                let v = verdicts
+                    .iter()
+                    .find(|v| v.name == comp.name && v.detected == comp.version);
+                tx.execute(
+                    "INSERT INTO audit_tech (scan_id, name, version, source, is_eol, branch_min) VALUES ($1, $2, $3, 'whatweb', $4, $5)",
+                    &[
+                        &scan_id,
+                        &comp.name,
+                        &comp.version,
+                        &v.is_some(),
+                        &v.map(|x| x.branch_min.clone()),
+                    ],
+                )
+                .map_err(|e| format!("audit_tech : {e}"))?;
+            }
         }
         if let Some(ref ss) = report.sslscan {
             let total = ss.strong_ciphers_count + ss.weak_ciphers.len();
@@ -612,6 +632,7 @@ impl DatabaseManager {
             return;
         };
         let tables = [
+            "audit_tech",
             "audit_dns_records",
             "audit_ports",
             "audit_http_headers",
