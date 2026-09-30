@@ -4,13 +4,13 @@ use std::time::{Duration, Instant};
 
 use crate::config::Config;
 use crate::modules::brand_sec::BrandSecAuditor;
-use crate::modules::ftp_audit::FtpAuditor;
 use crate::modules::dns::DnsAuditor;
 use crate::modules::dns_hardening::DnsHardeningAuditor;
 use crate::modules::dnsrecon_audit::DnsreconAuditor;
 use crate::modules::email_sec::EmailSecAuditor;
 use crate::modules::ffuf_audit::FfufAuditor;
 use crate::modules::findings::{FindingsEngine, SecurityFinding};
+use crate::modules::ftp_audit::FtpAuditor;
 use crate::modules::geo::GeoAuditor;
 use crate::modules::http::HttpAuditor;
 use crate::modules::http_probe::probe_parallel;
@@ -620,7 +620,10 @@ impl AuditOrchestrator {
         }
         // Fusion crt.sh -> sous-domaines : les hotes historiques (certs CT)
         // sont ajoutes s'ils ne sont pas deja connus (source = crt.sh).
-        let crt_added = crate::modules::crt_sh::CrtShAuditor::merge_into(&mut subdomains_result, &crt_sh_result);
+        let crt_added = crate::modules::crt_sh::CrtShAuditor::merge_into(
+            &mut subdomains_result,
+            &crt_sh_result,
+        );
         if crt_added > 0 {
             println!(
                 ">>> [CRT.SH] {crt_added} sous-domaine(s) historique(s) ajouté(s) via Certificate Transparency"

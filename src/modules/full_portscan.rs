@@ -147,8 +147,12 @@ impl FullPortScanner {
                     });
                 }
             }
-            eprintln!("[full_portscan] bail-out final: {} probes, {} timeouts, {} ouverts",
-                probed_now, timeouts_now, results.len());
+            eprintln!(
+                "[full_portscan] bail-out final: {} probes, {} timeouts, {} ouverts",
+                probed_now,
+                timeouts_now,
+                results.len()
+            );
             return results;
         }
 
@@ -162,8 +166,13 @@ impl FullPortScanner {
         let mut timeouts: usize = 0;
         for i in 0..probe_window {
             match get_state(&states, i) {
-                PortState::Timeout => { timeouts += 1; probed += 1; }
-                PortState::Open | PortState::Closed => { probed += 1; }
+                PortState::Timeout => {
+                    timeouts += 1;
+                    probed += 1;
+                }
+                PortState::Open | PortState::Closed => {
+                    probed += 1;
+                }
             }
         }
         let blackhole = probed >= 50 && (timeouts * 100 / probed.max(1)) >= 80;

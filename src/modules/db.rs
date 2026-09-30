@@ -118,7 +118,12 @@ impl DatabaseManager {
             tx.execute(
                 "INSERT INTO audit_dns_records (scan_id, record_type, record_value, is_secure) \
                  VALUES ($1, $2, $3, $4)",
-                &[&scan_id, &d.record_type, &strip_nul_bytes(&d.value), &d.is_secure],
+                &[
+                    &scan_id,
+                    &d.record_type,
+                    &strip_nul_bytes(&d.value),
+                    &d.is_secure,
+                ],
             )
             .map_err(|e| format!("audit_dns_records : {e}"))?;
         }
@@ -128,7 +133,12 @@ impl DatabaseManager {
             tx.execute(
                 "INSERT INTO audit_ports (scan_id, port, service, state, banner) \
                  VALUES ($1, $2, $3, 'OPEN', $4)",
-                &[&scan_id, &(p.port as i32), &strip_nul_bytes(p.service_hint), &p.banner.as_deref().map(strip_nul_bytes)],
+                &[
+                    &scan_id,
+                    &(p.port as i32),
+                    &strip_nul_bytes(p.service_hint),
+                    &p.banner.as_deref().map(strip_nul_bytes),
+                ],
             )
             .map_err(|e| format!("audit_ports : {e}"))?;
         }
@@ -138,7 +148,12 @@ impl DatabaseManager {
             tx.execute(
                 "INSERT INTO audit_http_headers (scan_id, header_name, header_value, evaluation) \
                  VALUES ($1, $2, $3, $4)",
-                &[&scan_id, &strip_nul_bytes(&h.name), &strip_nul_bytes(&h.value), &h.evaluation],
+                &[
+                    &scan_id,
+                    &strip_nul_bytes(&h.name),
+                    &strip_nul_bytes(&h.value),
+                    &h.evaluation,
+                ],
             )
             .map_err(|e| format!("audit_http_headers : {e}"))?;
         }
@@ -370,9 +385,8 @@ impl DatabaseManager {
                 &ts.raw_output,
             )?;
             // Composants versionnés -> audit_tech (verdict EOL calculé par le module)
-            let verdicts = crate::modules::tech_stack::TechStackAuditor::version_verdicts(
-                &ts.versioned,
-            );
+            let verdicts =
+                crate::modules::tech_stack::TechStackAuditor::version_verdicts(&ts.versioned);
             for comp in &ts.versioned {
                 let v = verdicts
                     .iter()
@@ -766,8 +780,7 @@ pub(crate) fn strip_nul_bytes(s: &str) -> String {
 /// \u0000 déjà présents dans le document sérialisé doivent disparaître,
 /// sinon le cast serveur ::jsonb échoue (séquence d'échappement non supportée).
 pub(crate) fn strip_nul_json(s: &str) -> String {
-    s.replace('\u{0}', "")
-      .replace("\\u0000", "")
+    s.replace('\u{0}', "").replace("\\u0000", "")
 }
 
 /// Troncature UTF-8 safe AVANT binding paramétré. Aucun échappement SQL ici :
