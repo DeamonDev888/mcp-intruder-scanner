@@ -128,7 +128,7 @@ impl DatabaseManager {
             tx.execute(
                 "INSERT INTO audit_ports (scan_id, port, service, state, banner) \
                  VALUES ($1, $2, $3, 'OPEN', $4)",
-                &[&scan_id, &(p.port as i32), &p.service_hint, &p.banner.as_deref().map(strip_nul_bytes)],
+                &[&scan_id, &(p.port as i32), &strip_nul_bytes(p.service_hint), &p.banner.as_deref().map(strip_nul_bytes)],
             )
             .map_err(|e| format!("audit_ports : {e}"))?;
         }
@@ -203,8 +203,8 @@ impl DatabaseManager {
                  VALUES ($1, $2, $3, $4, $5)",
                 &[
                     &scan_id,
-                    &s.subdomain,
-                    &s.ip_address,
+                    &strip_nul_bytes(&s.subdomain),
+                    &s.ip_address.as_deref().map(strip_nul_bytes),
                     &http_status,
                     &s.is_alive,
                 ],
@@ -381,10 +381,10 @@ impl DatabaseManager {
                     "INSERT INTO audit_tech (scan_id, name, version, source, is_eol, branch_min) VALUES ($1, $2, $3, 'whatweb', $4, $5)",
                     &[
                         &scan_id,
-                        &comp.name,
-                        &comp.version,
+                        &strip_nul_bytes(&comp.name),
+                        &strip_nul_bytes(&comp.version),
                         &v.is_some(),
-                        &v.map(|x| x.branch_min.clone()),
+                        &v.map(|x| strip_nul_bytes(&x.branch_min)),
                     ],
                 )
                 .map_err(|e| format!("audit_tech : {e}"))?;
@@ -774,6 +774,8 @@ pub(crate) fn strip_nul_json(s: &str) -> String {
 /// le protocole des paramètres liés transporte la valeur telle quelle
 /// (apostrophes, guillemets, dollar-quotes des preuves brutes).
 fn text_clipped_for_bind(s: &str, max_len: usize) -> String {
+    let s = strip_nul_bytes(s);
+    let s = s.as_str();
     if s.chars().count() > max_len {
         let cut: String = s.chars().take(max_len.saturating_sub(1)).collect();
         format!("{cut}…")
