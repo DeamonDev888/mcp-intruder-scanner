@@ -56,7 +56,7 @@ impl DatabaseManager {
     /// protocole sépare code et données), et les apostrophes ou tagués
     /// dollar des preuves sont transportés tels quels, sans mutilation.
     pub fn save_scan(report: &FullAuditReport, db_name: &str) -> Result<i64, String> {
-        let raw_json = report.to_json();
+        let raw_json = strip_nul_json(&report.to_json());
         let open_ports: Vec<i32> = report.ports.iter().map(|p| p.port as i32).collect();
 
         let mut client = Self::connect(db_name)?;
@@ -118,7 +118,7 @@ impl DatabaseManager {
             tx.execute(
                 "INSERT INTO audit_dns_records (scan_id, record_type, record_value, is_secure) \
                  VALUES ($1, $2, $3, $4)",
-                &[&scan_id, &d.record_type, &d.value, &d.is_secure],
+                &[&scan_id, &d.record_type, &strip_nul_bytes(&d.value), &d.is_secure],
             )
             .map_err(|e| format!("audit_dns_records : {e}"))?;
         }
@@ -128,7 +128,7 @@ impl DatabaseManager {
             tx.execute(
                 "INSERT INTO audit_ports (scan_id, port, service, state, banner) \
                  VALUES ($1, $2, $3, 'OPEN', $4)",
-                &[&scan_id, &(p.port as i32), &p.service_hint, &p.banner],
+                &[&scan_id, &(p.port as i32), &p.service_hint, &p.banner.as_deref().map(strip_nul_bytes)],
             )
             .map_err(|e| format!("audit_ports : {e}"))?;
         }
@@ -138,7 +138,7 @@ impl DatabaseManager {
             tx.execute(
                 "INSERT INTO audit_http_headers (scan_id, header_name, header_value, evaluation) \
                  VALUES ($1, $2, $3, $4)",
-                &[&scan_id, &h.name, &h.value, &h.evaluation],
+                &[&scan_id, &strip_nul_bytes(&h.name), &strip_nul_bytes(&h.value), &h.evaluation],
             )
             .map_err(|e| format!("audit_http_headers : {e}"))?;
         }
@@ -754,6 +754,22 @@ pub(crate) fn sql_int_array<T: ToString>(items: &[T]) -> String {
     }
 }
 
+/// Les bannières de services peuvent véhiculer des octets NUL bruts ou des
+/// séquences d'échappement \u0000 que PostgreSQL refuse (jsonb ET text).
+/// Sanitisation au point unique de passage vers la DB : le NUL devient
+/// la séquence de remplacement visible «␀» (preuve lisible, jamais silencieuse).
+pub(crate) fn strip_nul_bytes(s: &str) -> String {
+    s.replace('\u{0}', "\u{2400}")
+}
+
+/// Variante dédiée au payload jsonb : les NUL littéraux ET les échappements
+/// \u0000 déjà présents dans le document sérialisé doivent disparaître,
+/// sinon le cast serveur ::jsonb échoue (séquence d'échappement non supportée).
+pub(crate) fn strip_nul_json(s: &str) -> String {
+    s.replace('\u{0}', "")
+      .replace("\\u0000", "")
+}
+
 /// Troncature UTF-8 safe AVANT binding paramétré. Aucun échappement SQL ici :
 /// le protocole des paramètres liés transporte la valeur telle quelle
 /// (apostrophes, guillemets, dollar-quotes des preuves brutes).
@@ -797,8 +813,8 @@ fn append_tool_output(
             &status,
             &(items_count as i32),
             &round2(elapsed),
-            &summary,
-            &raw_output,
+            &strip_nul_bytes(summary),
+            &strip_nul_bytes(raw_output),
         ],
     )
     .map_err(|e| format!("audit_tool_outputs ({tool_name}) : {e}"))?;
