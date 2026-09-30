@@ -62,6 +62,7 @@ fn redact_ips(s: &str) -> String {
 }
 
 /// Masque la version Redis : garde majeur.mineur seulement.
+#[allow(dead_code)] // reserve a un futur verdict INFO (version complete non requise par PING)
 fn mask_version(v: &str) -> String {
     let parts: Vec<&str> = v.split('.').collect();
     if parts.len() >= 2 {
