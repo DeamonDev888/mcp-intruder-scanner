@@ -471,6 +471,12 @@ impl FullAuditReport {
                     tw.detected_technologies.join(", ")
                 }
             );
+            if !tw.js_third_party.is_empty() {
+                println!(
+                    "    • Technos JS tierces   : {}",
+                    tw.js_third_party.join(", ")
+                );
+            }
             if !tw.versioned.is_empty() {
                 println!("    • Composants versionnés :");
                 for c in &tw.versioned {

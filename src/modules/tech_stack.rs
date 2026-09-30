@@ -22,6 +22,8 @@ pub struct TechStackResult {
     pub detected_technologies: Vec<String>,
     /// Composants versionnés : (nom, version), dédupliqués.
     pub versioned: Vec<TechComponent>,
+    /// Technos tierces détectées par marqueurs HTML/JS (GTM, OneTrust, ...).
+    pub js_third_party: Vec<String>,
     pub raw_output: String,
     pub summary: String,
 }
@@ -72,6 +74,7 @@ impl TechStackAuditor {
                     emails_exposed: Vec::new(),
                     detected_technologies: Vec::new(),
                     versioned: Vec::new(),
+                    js_third_party: Vec::new(),
                     raw_output: "whatweb : timeout (60s) ou binaire introuvable".into(),
                     summary: "WhatWeb interrompu : deadline dépassée".into(),
                 };
@@ -84,10 +87,30 @@ impl TechStackAuditor {
         let _ = fs::remove_file(&tmp_output);
 
         let (http_status, server, emails, techs, versioned) = Self::parse_json(&raw_json);
+        let js_third_party = {
+            let hostport2 = crate::utils::host_with_port(target, custom_ports);
+            let mut found = Vec::new();
+            for scheme in ["https", "http"] {
+                let url = format!("{}://{}/", scheme, hostport2);
+                if let Some(o) =
+                    crate::utils::run_tool("curl", &["-s", "-L", "--max-time", "5", &url], 30)
+                {
+                    let html = String::from_utf8_lossy(&o.stdout).to_string();
+                    if html.trim().is_empty() {
+                        continue;
+                    }
+                    found = Self::sweep_js_markers(&html);
+                    break;
+                }
+            }
+            found
+        };
+        let techs = merge_unique(techs, js_third_party.to_vec());
         let summary = format!(
-            "WhatWeb a identifié {} composant(s)/technologie(s) dont {} versionné(s), et {} adresse(s) email en {:.2}s",
+            "WhatWeb a identifié {} composant(s)/technologie(s) dont {} versionné(s), {} techno(s) JS tierce(s), et {} adresse(s) email en {:.2}s",
             techs.len(),
             versioned.len(),
+            js_third_party.len(),
             emails.len(),
             elapsed
         );
@@ -100,9 +123,59 @@ impl TechStackAuditor {
             emails_exposed: emails,
             detected_technologies: techs,
             versioned,
+            js_third_party,
             raw_output: raw_json,
             summary,
         }
+    }
+
+    /// Signatures technos tierces : (nom affiché, marqueurs HTML/JS).
+    /// Marqueur = sous-chaîne case-insensitive présente dans la source ;
+    /// un seul marqueur suffit (OR). Les scripts chargés au runtime laissent
+    /// leur marqueur de chargement dans la source (gtm.js?id=, otSDKStub.js).
+    pub(crate) const JS_THIRD_PARTY_MARKERS: &[(&str, &[&str])] = &[
+        ("Google Tag Manager", &["googletagmanager.com/gtm.js", "googletagmanager.com/ns.html"]),
+        ("Google Analytics (gtag)", &["gtag/js?id=G-", "googletagmanager.com/gtag/js"]),
+        ("reCAPTCHA", &["google.com/recaptcha/api.js", "grecaptcha.execute"]),
+        ("OneTrust CMP", &["cookielaw.org/scripttemplates/otSDKStub.js", "data-domain-script"]),
+        ("Criteo", &["criteo.com", "criteo.net", "criteo-ads.js", "CRITEO_RETAILER_VISITOR_COOKIE"]),
+        ("DialogInsight", &["cdn.dialoginsight.com"]),
+        ("DoubleClick / Google Ad Manager", &["doubleclick.net", "googlesyndication.com", "securepubads.g.doubleclick.net"]),
+        // Les URLs échappées \/\/ (blocs JS/JSON) doivent matcher aussi :
+        // le lowercasing ne retire pas les backslashes, on teste les deux formes.
+        ("Google Maps", &["maps.googleapis.com/maps", "maps.googleapis.com\\/maps", "maps.google.com/maps"]),
+        ("Plausible Analytics", &["plausible.io/js", "plausible.io/api/event"]),
+        ("Google Fonts", &["fonts.googleapis.com/css", "fonts.googleapis.com\\/css", "fonts.gstatic.com"]),
+        ("Cloudflare Turnstile", &["challenges.cloudflare.com/turnstile"]),
+        ("hCaptcha", &["hcaptcha.com/1/api.js"]),
+        ("Stripe", &["js.stripe.com"]),
+        ("PayPal", &["paypal.com/sdk/js", "paypalobjects.com"]),
+        ("Facebook Pixel", &["connect.facebook.net", "fbevents.js"]),
+        ("Hotjar", &["static.hotjar.com"]),
+        ("Sentry", &["browser.sentry-cdn.com", "js.sentry-cdn.com"]),
+        ("Segment", &["cdn.segment.com"]),
+        ("TikTok Pixel", &["analytics.tiktok.com"]),
+        ("Microsoft Clarity", &["clarity.ms"]),
+        ("jQuery", &["jquery.min.js", "jquery.js", "jquery-"]),
+        ("React", &["react.production.min.js", "react-dom", "_reactRoot"]),
+        ("Vue.js", &["vue.runtime", "vue.min.js", "vue.global"]),
+        ("Angular", &["ng-version", "angular.min.js"]),
+        ("Bootstrap", &["bootstrap.min.css", "bootstrap.bundle.min.js"]),
+    ];
+
+    /// Cherche les marqueurs dans le HTML ; retourne les noms détectés.
+    pub(crate) fn sweep_js_markers(html: &str) -> Vec<String> {
+        let lower = html.to_lowercase();
+        let mut out = Vec::new();
+        for (name, markers) in Self::JS_THIRD_PARTY_MARKERS {
+            if markers
+                .iter()
+                .any(|m| lower.contains(&m.to_lowercase()))
+            {
+                out.push(name.to_string());
+            }
+        }
+        out
     }
 
     /// Parse la sortie JSON de whatweb (`--log-json`) avec serde_json.
@@ -349,6 +422,16 @@ fn normalize_version_token(s: &str) -> String {
     best.unwrap_or(s).trim_matches('.').to_string()
 }
 
+
+/// Fusionne deux listes sans doublons (order-preserving).
+fn merge_unique(mut base: Vec<String>, extra: Vec<String>) -> Vec<String> {
+    for e in extra {
+        if !base.contains(&e) {
+            base.push(e);
+        }
+    }
+    base
+}
 
 /// Décompose une bannière Server en composants produit/version.
 /// "Apache/2.2.15 (Unix)" -> [("Apache", "2.2.15")]

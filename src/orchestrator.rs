@@ -409,9 +409,12 @@ impl AuditOrchestrator {
                     // (rustscan externe s est montré non-déterministe : ports
                     // sautés selon les runs). Le natif couvre les 65535 en ~5 s.
                     let start = Instant::now();
+                    // Timeout reduit (etait 1200ms = bloquait 60s+ sur cible
+                    // qui drop les SYN). Avec bail-out live (90% timeout) +
+                    // 300ms/port, scan termine en <20s meme sur blackhole.
                     let results = crate::modules::full_portscan::FullPortScanner::scan_all(
                         &t,
-                        Duration::from_millis(1200),
+                        Duration::from_millis(300),
                         None::<fn(u16)>,
                     );
                     let mut open_ports: Vec<u16> = results.iter().map(|r| r.port).collect();
