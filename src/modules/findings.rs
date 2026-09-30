@@ -538,12 +538,25 @@ impl FindingsEngine {
         }
 
         if web_endpoints.dangerous_methods_found {
+            // TRACE annoncé mais non réfléchi (501/405) = annonce morte : LOW.
+            // Exception PUT/DELETE : méthodes actives dangereuses, HIGH conservé.
+            let trace_only_dead = web_endpoints.trace_reflected == Some(false)
+                && !web_endpoints
+                    .allowed_http_methods
+                    .iter()
+                    .any(|m| m == "PUT" || m == "DELETE" || m == "TRACK");
+            let (sev, extra) = if trace_only_dead {
+                ("LOW", " (TRACE annoncé dans Allow: mais non réfléchi par le serveur)")
+            } else {
+                ("HIGH", "")
+            };
             findings.push(SecurityFinding {
-                severity: "HIGH",
+                severity: sev,
                 category: "WEB",
                 title: format!(
-                    "Méthodes HTTP potentiellement dangereuses activées : {}",
-                    web_endpoints.allowed_http_methods.join(", ")
+                    "Méthodes HTTP potentiellement dangereuses activées : {}{}",
+                    web_endpoints.allowed_http_methods.join(", "),
+                    extra
                 ),
                 recommendation: "Désactiver TRACE, TRACK, PUT, DELETE au niveau de la configuration du serveur Web.".into(),
             });

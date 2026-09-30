@@ -442,6 +442,7 @@ fn test_findings_engine_evaluates_telnet_and_open_resolver() {
         robots_disallowed_paths: vec![],
         allowed_http_methods: vec!["GET".into(), "POST".into()],
         dangerous_methods_found: false,
+            trace_reflected: None,
         http2_supported: true,
         alpn_negotiated: Some("h2".into()),
     };
@@ -790,6 +791,7 @@ fn create_dummy_report(findings: Vec<SecurityFinding>) -> FullAuditReport {
             robots_disallowed_paths: vec![],
             allowed_http_methods: vec!["GET".into()],
             dangerous_methods_found: false,
+            trace_reflected: None,
             http2_supported: true,
             alpn_negotiated: Some("h2".into()),
         },
@@ -1710,10 +1712,12 @@ fn test_full_portscan_bailout_on_blackhole() {
         None::<fn(u16)>,
     );
     let elapsed = start.elapsed();
-    // Avec bail-out: termine en < 5s (200 probes x 150ms / 128 workers).
-    // Sans bail-out: ~150s (2 passes x 65535 x 150ms / 128).
+    // Avec bail-out (seuil 98%%): termine en < 15s. Le seuil 98 laisse passer
+    // ~2x plus de sondes que le 90 historique (faux blackhole evite sur les
+    // hotes filtrés a 95%% avec ports vivants - cf. notairetruchon) donc le
+    // budget passe de 8s a 15s. Sans bail-out: ~150s.
     assert!(
-        elapsed < Duration::from_secs(8),
+        elapsed < Duration::from_secs(15),
         "scan_all a pris {}s sur blackhole - bail-out anti-blackhole inactif",
         elapsed.as_secs_f32()
     );

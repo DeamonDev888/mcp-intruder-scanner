@@ -101,7 +101,8 @@ impl FullPortScanner {
                 if n.is_multiple_of(32) && blackhole_c.load(Ordering::Relaxed) == 0 {
                     let pr = probed_c.load(Ordering::Relaxed);
                     let to = timeouts_c.load(Ordering::Relaxed);
-                    if pr >= 64 && to * 100 / pr >= 90 {
+                    // Seuil 98% (etait 90): notairetruchon.com drop ~95% SYN mais 6 ports cPanel repondent.
+                    if pr >= 64 && to * 100 / pr >= 98 {
                         blackhole_c.store(1, Ordering::Relaxed);
                         eprintln!("[full_portscan] blackhole live-detecte ({} timeouts / {} sondes) - workers sortiront apres probe courante", to, pr);
                         // Faire en sorte que la boucle se termine bientot:
@@ -131,7 +132,8 @@ impl FullPortScanner {
         let probed_now = probed.load(Ordering::Relaxed);
         let timeouts_now = timeouts.load(Ordering::Relaxed);
         let blackhole_now = blackhole_flag.load(Ordering::Relaxed) == 1
-            || (probed_now >= 256 && timeouts_now * 100 / probed_now.max(1) >= 90);
+            // Filet: seuil 98 (aligne avec live-detector)
+            || (probed_now >= 256 && timeouts_now * 100 / probed_now.max(1) >= 98);
         if blackhole_now {
             let mut results = Vec::new();
             for p in start..=end {
