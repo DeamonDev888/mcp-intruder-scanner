@@ -47,6 +47,10 @@ fn run_bin(bin: &str, args: &[&str], stdin_data: Option<&str>) -> (u16, String) 
     } else {
         Stdio::null()
     });
+    // Indispensable : sans pipe explicite, stdout est hérité du parent et
+    // wait_with_output() renvoie TOUJOURS un stdout vide (bug historique :
+    // tous les verdicts tombaient en fallback EXIT<code>).
+    cmd.stdout(Stdio::piped()).stderr(Stdio::null());
     let Ok(mut child) = cmd.spawn() else {
         return (127, String::new());
     };
@@ -121,12 +125,10 @@ fn dispatch_target(target: &str, force: bool) {
     if has("DNS", "dmarc") || has("DNS", "spf") {
         if force || !has_recent_verdict("spoofcheck", target) {
             let (code, out) = run_bin("spoofcheck", &[target], None);
-            let verdict = out
-                .lines()
-                .find_map(|l| {
-                    l.strip_prefix("VERDICT")
-                        .map(|v| v.trim_start_matches(':').trim().to_string())
-                })
+            // spoofcheck émet « VERDICT   : PARTIEL » (clé en majuscules,
+            // espaces variables) — même parse robuste que les bins DB.
+            let verdict = parse_kv_line(&out, "VERDICT")
+                .filter(|v| !v.is_empty())
                 .unwrap_or_else(|| format!("EXIT{code}"));
             println!("  spoofcheck → {verdict}");
             save_verdict(
