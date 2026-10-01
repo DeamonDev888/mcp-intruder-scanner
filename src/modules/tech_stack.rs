@@ -520,6 +520,8 @@ fn products_from_server_banner(banner: &str) -> Vec<(String, String)> {
 /// Un token ressemble à une version s'il commence par un chiffre et contient
 /// au moins un point OU au moins deux chiffres ("3", "2.4.7", "1.22").
 /// "Universal", "RESERVED" etc. sont exclus d'office.
+/// Un bloc de 8+ chiffres purs (epoch de cache-busting ?ver=1715007332)
+/// n'est PAS une version : rejet explicite (bug vu live university.example.org JQuery).
 fn looks_like_version(s: &str) -> bool {
     let t = s.trim().trim_start_matches(['v', 'V']);
     let mut chars = t.chars();
@@ -527,6 +529,11 @@ fn looks_like_version(s: &str) -> bool {
         return false;
     };
     if !first.is_ascii_digit() {
+        return false;
+    }
+    // Bloc numérique pur trop long = timestamp/id, pas une version.
+    let digits_only = t.chars().all(|c| c.is_ascii_digit());
+    if digits_only && t.len() >= 8 {
         return false;
     }
     let rest: String = chars.collect();
@@ -774,6 +781,11 @@ mod tests {
 
     #[test]
     fn test_version_helpers() {
+        // Cache-buster epoch : JAMAIS une version (bug live university.example.org JQuery)
+        assert!(!looks_like_version("1715007332"));
+        assert!(!looks_like_version("20260930120000"));
+        // Versions légitimes intactes
+        assert!(looks_like_version("2.4.7"));
         assert_eq!(normalize_version_token("nginx/1.22.1"), "1.22.1");
         assert_eq!(normalize_version_token("Apache/2.4.7 (Ubuntu)"), "2.4.7");
         assert_eq!(normalize_version_token("3"), "3");
