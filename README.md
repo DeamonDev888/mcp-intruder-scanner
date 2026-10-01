@@ -268,7 +268,7 @@ mcp_intruder impacts                            # dashboard
 ## 📚 Voir aussi
 
 
-- **`CHANGELOG.md`** : historique des versions (v0.1 → v0.5.6)
+- **`CHANGELOG.md`** : historique des versions (v0.1 → v0.5.7)
 - **`AUDIT-RUST-2026-09-19.md`** : audit statique complet (81 findings corrigés)
 - **`MEMO-SERVEUR-KALI.md`** : notes d'environnement Kali et pièges connus
 

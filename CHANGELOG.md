@@ -4,6 +4,16 @@ Toutes les modifications notables de `mcp_intruder` sont documentées ici.
 
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.5.7] — 2026-09-30
+
+### Fixed
+- **Pureté scanner offensif** : recommandations à résidu normatif (juridiction/politique interne dans `waf.rs`, politique de transfert dans `findings.rs`) remplacées par du vocabulaire technique (techniques d'évasion, périmètre d'hébergement).
+- **Preuves /tmp en permissions 0600** : `envx_proof.env` et `gitdump_logs.txt` étaient posés world-readable — désormais lisibles opérateur seul (`std::os::unix::fs::PermissionsExt`).
+- **keyprobe multi-clés** : chainx ne pipe que la première clé en stdin (avant, 9 clés = 1 vérifiée). Concaténation de toutes les clés, une seule exécution, keyprobe boucle sur stdin.
+- **Underflow scan_range** : `full_portscan::scan_range` acceptait `end < start` → `usize` panic. Garde ajoutée (plage inversée = `Vec::new()`).
+- **sslscan port 443 codé en dur** : `SslscanAuditor::audit` ignorait `--ports` (TLS sur port 8443 = aveugle). Signature étendue à `audit(target, custom_ports)` + appel orchestrateur adapté via capture avant la closure `'static`.
+- **Détection TLS 1.0/1.1 ressuscitée** : `openssl.cnf` Kali force `MinProtocol=TLSv1.2`, le client openssl refusait le handshake avant d'interroger le serveur → `supports_tls10/11` quasi toujours false. Override `-min_protocol TLSv1` ajouté aux deux sondes legacy. Vérifié live : `tls-v1-0.badssl.com` → `True | True` ; `scanme.nmap.org` → `False | False`.
+
 ## [0.5.6] — 2026-09-30
 
 ### Added
