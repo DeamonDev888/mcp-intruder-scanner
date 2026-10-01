@@ -5,8 +5,8 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Language-Rust%202021-orange?style=for-the-badge&logo=rust" alt="Rust">
   <img src="https://img.shields.io/badge/Platform-Kali%20Linux%20Rolling-blue?style=for-the-badge&logo=kali-linux" alt="Kali Linux">
-  <img src="https://img.shields.io/badge/Database-PostgreSQL%2016--Tables-336791?style=for-the-badge&logo=postgresql" alt="PostgreSQL">
-  <img src="https://img.shields.io/badge/Modules-16--Offensive-red?style=for-the-badge" alt="16 modules offensifs">
+  <img src="https://img.shields.io/badge/Database-PostgreSQL%2018--Tables-336791?style=for-the-badge&logo=postgresql" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/Modules-24--Offensive-red?style=for-the-badge" alt="24 modules offensifs">
   <img src="https://img.shields.io/badge/Output-JSON%20Ready%20%7C%20TUI-cyan?style=for-the-badge" alt="CLI & JSON">
 </p>
 
@@ -66,10 +66,10 @@ mcp_intruder example.com -1 -j | jq '.overall_score'
 mcp_intruder example.com -3 -j | jq '.findings[] | select(.severity == "CRITICAL" or .severity == "HIGH")'
 
 # Lister tous les ports ouverts découverts :
-mcp_intruder example.com -1 -j | jq '.ports.open_ports'
+mcp_intruder example.com -1 -j | jq '[.ports[] | select(.is_open) | .port]'
 
 # Vérifier la présence d'une politique SPF / DMARC valide :
-mcp_intruder example.com -1 -j | jq '{spf: .email_sec.has_spf, dmarc: .email_sec.has_dmarc}'
+mcp_intruder example.com -1 -j | jq '{spf: .dns.spf_found, dmarc: .dns.dmarc_found}'
 
 # Lister les technologies détectées par HTTPx (ProjectDiscovery) :
 mcp_intruder example.com --httpx -j | jq '.http_probe[].technologies'
@@ -107,13 +107,14 @@ mcp_intruder example.com --sqlmap -j | jq '.sqli[] | {url, parameter, dbms}'
 
 Chaque scan est **automatiquement persisté** dans une base PostgreSQL locale (`mcp_intruder_audit` par défaut, modifiable via `--db <NAME>`).
 
-**Schéma : 12 tables relationnelles** :
+**Schéma : 13 tables relationnelles** (écrites par chaque scan, en une transaction atomique) :
 - `audit_scans` (header + payload JSONB exhaustif)
 - `audit_dns_records`, `audit_ports`, `audit_http_headers`
 - `audit_tls_certs` (incluant `valid_from`, `is_self_signed`, `supports_tls10..13`)
 - `audit_subdomains`, `audit_findings`
-- `audit_geo_compliance`, `audit_email_sec`, `audit_web_endpoints`
-- `audit_dns_hardening`, `audit_tool_outputs`
+- `audit_geo`, `audit_email_sec`, `audit_web_endpoints`
+- `audit_dns_hardening`, `audit_tool_outputs`, `audit_tech` (composants versionnés + verdict EOL), `audit_loot` (fichiers exfiltrés, opt-in `--loot`)
+- En complément : `audit_impact` (verdicts des modules de preuve d'impact) et `audit_surface` (cartographie surfx) sont alimentées par les bins dédiés, hors `save_scan`
 
 ```bash
 # Lister les 10 derniers scans de example.com
@@ -141,10 +142,10 @@ Pour un utilisateur en direct sur le serveur Kali, `mcp-intruder` propose une co
 
 ---
 
-## 🔬 Les 16 Modules Spécialisés Embarqués (v0.3)
+## 🔬 Les 24 Modules Spécialisés Embarqués (v0.5)
 
 ### Modules Core Rust (toujours actifs)
-1. **Ports Scanner** : Balayage TCP Connect des 75+ ports critiques (résolution DNS, bannières, services).
+1. **Ports Scanner** : Balayage TCP Connect des 64 ports critiques (résolution DNS, bannières, services, détection d'edge fantôme).
 2. **Géolocalisation & ASN** : Whois + IP-API, ASN, organisation, pays, région.
 3. **TLS Auditor** : Chaîne de certification complète, ciphers, validité, support TLS 1.0-1.3.
 4. **DNS & Messagerie** : A/AAAA/MX/NS/TXT/CAA/SPF/DMARC/DKIM + DNSSEC.
@@ -181,27 +182,26 @@ Pour un utilisateur en direct sur le serveur Kali, `mcp-intruder` propose une co
 ## 🛠️ Déploiement & Installation
 
 ```bash
-# 1. Installation complète automatisée (Kali / Debian / Ubuntu) :
-sudo ./mcp-intruder-install.sh
-# Ce script :
-#   - Installe Rust + PostgreSQL + outils Kali + SecLists
-#   - Télécharge pdhttpx + subfinder depuis ProjectDiscovery GitHub releases
-#   - Initialise le schéma PostgreSQL (12 tables) + crée le rôle 'mcp_intruder'
-#   - Valide la DB par un INSERT ... RETURNING id
-#   - Lance un scan de test pour confirmer la persistance automatique
-
-# 2. Compilation manuelle depuis le repo :
+# 1. Compilation depuis le repo :
 git clone https://github.com/DeamonDev888/mcp-intruder-scanner.git
 cd mcp-intruder-scanner
 cargo build --release
 
-# 3. Déploiement global :
+# 2. Déploiement global (bin principal + modules d'impact + TUI) :
 sudo cp target/release/mcp_intruder /usr/local/bin/mcp_intruder
+for b in chainx envx gitdump keyprobe gkeyx spoofcheck subalive surfx cnametake cnamewatch ftpx ftplx lootx impacts mysqlx redisx mongodx; do
+  sudo cp target/release/$b /usr/local/bin/$b
+done
 sudo cp launch.sh /usr/local/bin/mcp-intruder
-sudo chmod +x /usr/local/bin/mcp-intruder /usr/local/bin/mcp_intruder
+sudo chmod +x /usr/local/bin/mcp-intruder
+
+# 3. Schéma PostgreSQL (13 tables de scan + audit_impact/audit_surface) :
+sudo -u postgres psql -f init_schema.sql
+sudo -u postgres psql -f schema_full.sql   # tables détaillées
+sudo -u postgres psql -f init_role.sql     # rôle propriétaire
 
 # 4. Vérification de l'installation :
-mcp_intruder tools   # diagnostique 16 binaires + SecLists + PostgreSQL
+mcp_intruder tools   # diagnostique les binaires + SecLists + PostgreSQL
 ```
 
 ### Dépendances Optionnelles (modules avancés)
@@ -220,19 +220,19 @@ mcp_intruder tools   # diagnostique 16 binaires + SecLists + PostgreSQL
 
 ## 🧪 Tests & Qualité
 
-- **77 tests unitaires** : `cargo test` (0 failed) — dont 20 anti-régression qui verrouillent les invariants critiques (no compliance mention, score clamp, sql_esc, pas de sh -c, etc.)
+- **152 tests unitaires** : `cargo test` (0 failed) — dont une vingtaine d'anti-régression qui verrouillent les invariants critiques (score clamp, bind params, pas de sh -c, exclusions lab chainx, etc.)
 - **Clippy strict** : `cargo clippy --all-targets -- -D warnings` (0 warning)
 - **Lint format** : `cargo fmt --check`
 - **Build release** : 4.7 MB, optimisé LTO
 
 ```bash
-cargo test                  # 77/77 OK (YOLO : skip les warnings, ship it)
+cargo test                  # 152/152 OK
 cargo clippy --all-targets -- -D warnings  # strict : 0 warning obligatoire
 ```
 
 ---
 
-## 🧩 14 modules d'impact intégrés (même crate depuis v0.5.0)
+## 🧩 17 modules d'impact intégrés (même crate depuis v0.5.0)
 
 > Depuis la v0.5.0, les modules d'impact font **partie de `mcp_intruder`** (la crate `crate-impact` a été yankée sur crates.io — un seul crate, un seul `cargo install`).
 
@@ -240,7 +240,7 @@ Tous lecture-seule stricte (GET/DNS uniquement). Verdicts persistés dans `audit
 
 | Module | Rôle |
 |---|---|
-| `mcp_intruder chainx` | Dispatcher automatique — lit le catalogue DB, route chaque finding vers son bin |
+| `mcp_intruder chainx` | Dispatcher automatique — lit le catalogue DB, route chaque finding vers son bin (depuis v0.5.6 : finding DB exposée → `mysqlx`/`redisx`/`mongodx`) |
 | `mcp_intruder envx <url>` | Preuve de contenu d'un `.env` exposé (gates anti-faux-positif WAF) |
 | `mcp_intruder gitdump <base>` | Preuve d'un dépôt `.git/` exposé (remotes + identités, pas de dump complet) |
 | `mcp_intruder keyprobe` (stdin) | Classification + vérif Google Maps des clés API |
@@ -253,6 +253,9 @@ Tous lecture-seule stricte (GET/DNS uniquement). Verdicts persistés dans `audit
 | `mcp_intruder ftpx <hôte>` | Preuve FTP anonyme (230 vs 530) |
 | `mcp_intruder ftplx <hôte> [--dl]` | Loot FTP borné + SHA-256 (jamais d'upload) |
 | `mcp_intruder lootx [scan_id]` | Qualification des fichiers lootés (SENSIBLE/NEUTRE/SANS_VALEUR) |
+| `mcp_intruder mysqlx <hôte>` | Preuve d'exposition MySQL (greeting :3306, zéro credential) |
+| `mcp_intruder redisx <hôte>` | Preuve d'exposition Redis (PING :6379, lecture seule) |
+| `mcp_intruder mongodx <hôte>` | Preuve d'exposition MongoDB (hello OP_MSG :27017) |
 | `mcp_intruder impacts [--live]` | Dashboard DB + re-vérification live des clés |
 
 ```bash
@@ -265,7 +268,7 @@ mcp_intruder impacts                            # dashboard
 ## 📚 Voir aussi
 
 
-- **`CHANGELOG.md`** : historique des versions (v0.1 → v0.3)
+- **`CHANGELOG.md`** : historique des versions (v0.1 → v0.5.6)
 - **`AUDIT-RUST-2026-09-19.md`** : audit statique complet (81 findings corrigés)
 - **`MEMO-SERVEUR-KALI.md`** : notes d'environnement Kali et pièges connus
 
@@ -274,5 +277,5 @@ mcp_intruder impacts                            # dashboard
 <p align="center">
   <img src="assets/mcp-intruder_logo.svg" alt="MCP-Intruder Logo" width="380">
   <br>
-  <sub>Moteur d'audit offensif · 16 modules · Persistance PostgreSQL · CLI/TUI/JSON</sub>
+  <sub>Moteur d'audit offensif · 24 modules · 17 modules d'impact · Persistance PostgreSQL · CLI/TUI/JSON</sub>
 </p>

@@ -171,7 +171,10 @@ fn probe(host: &str, port: u16) -> (String, String, String) {
         return (
             "MONGO_EDGE_FANTOME".into(),
             "réponse HTTP — artefact edge/WAF, pas un mongod".into(),
-            format!("first-line: {}", redact_ips(head.lines().next().unwrap_or(""))),
+            format!(
+                "first-line: {}",
+                redact_ips(head.lines().next().unwrap_or(""))
+            ),
         );
     }
 
@@ -219,10 +222,7 @@ fn main() {
         std::process::exit(2);
     }
     let host = &args[1];
-    let port: u16 = args
-        .get(2)
-        .and_then(|p| p.parse().ok())
-        .unwrap_or(27017);
+    let port: u16 = args.get(2).and_then(|p| p.parse().ok()).unwrap_or(27017);
     let (verdict, detail, evidence) = probe(host, port);
     println!("hôte     : {host}");
     println!("verdict  : {verdict}");

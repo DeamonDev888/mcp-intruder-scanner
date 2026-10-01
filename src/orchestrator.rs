@@ -549,17 +549,13 @@ impl AuditOrchestrator {
                 )
             {
                 const WELL_KNOWN: &[u16] = &[
-                        21, 22, 25, 53, 80, 81, 110, 143, 443, 465, 587,
-                        995, 993, 1080, 1194, 1433, 1521, 1723, 1883,
-                        2049, 2082, 2083, 2086, 2087, 2095, 2096,
-                        3306, 3389, 4443, 5060, 5432, 5900, 6379, 8000,
-                        8080, 8081, 8443, 8888, 9200, 9418, 11211, 15672,
-                        27017, 27018, 27019,
+                    21, 22, 25, 53, 80, 81, 110, 143, 443, 465, 587, 995, 993, 1080, 1194, 1433,
+                    1521, 1723, 1883, 2049, 2082, 2083, 2086, 2087, 2095, 2096, 3306, 3389, 4443,
+                    5060, 5432, 5900, 6379, 8000, 8080, 8081, 8443, 8888, 9200, 9418, 11211, 15672,
+                    27017, 27018, 27019,
                 ];
                 let before = port_results.len();
-                port_results.retain(|p| {
-                    WELL_KNOWN.contains(&p.port) || p.port <= 1024
-                });
+                port_results.retain(|p| WELL_KNOWN.contains(&p.port) || p.port <= 1024);
                 // On ne mute pas rustscan_result (immutable ici) ; port_results
                 // est deja filtre, et le rapport final est calcule depuis
                 // port_results. Les open_ports de rustscan_result restent
@@ -569,7 +565,10 @@ impl AuditOrchestrator {
                 if after < before {
                     eprintln!(
                         "[edge-guard] {} : filtre {} port(s) fantome(s) edge ({} -> {})",
-                        target, before - after, before, after
+                        target,
+                        before - after,
+                        before,
+                        after
                     );
                 }
             }

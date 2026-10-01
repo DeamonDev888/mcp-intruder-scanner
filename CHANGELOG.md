@@ -4,6 +4,14 @@ Toutes les modifications notables de `mcp_intruder` sont documentées ici.
 
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.5.6] — 2026-09-30
+
+### Added
+- **chainx dispatche désormais les bases de données exposées** : un finding `PORT « Port de base de données N (MySQL/Redis/MongoDB) exposé publiquement »` déclenche automatiquement `mysqlx`/`redisx`/`mongodx` (greeting protocole en lecture seule, zéro credential). Les bins persistant déjà leur verdict dans `audit_impact`, chainx ne fait que les déclencher au bon moment (gate <24h et `--force` identiques aux autres modules). Le mapping est verrouillé par `db_bin_mapping_findings_port` et le parsing de sortie par `parse_kv_verdict_avec_espaces_variables`. PostgreSQL exposé (5432) ne déclenche rien — pas de bin dédié, pas de dispatch inventé.
+
+### Changed
+- **Purge du code mort** : `src/modules/orchestrator.rs` et `src/modules/report.rs` (doublons périmés du 2026-09-28, non déclarés dans `mod.rs` donc jamais compilés) supprimés — archivés dans `archive locale/dead-code-20260930/`. Les versions actives sont `src/orchestrator.rs` et `src/report.rs`.
+
 ## [0.5.5] — 2026-09-30
 
 ### Fixed

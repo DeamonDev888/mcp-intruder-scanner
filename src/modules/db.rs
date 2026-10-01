@@ -442,15 +442,15 @@ impl DatabaseManager {
             v
         };
         for (name, version) in &header_inserts {
-            if ! tech_seen.insert((name.clone(), version.clone())) {
+            if !tech_seen.insert((name.clone(), version.clone())) {
                 continue;
             }
-            let v = crate::modules::tech_stack::TechStackAuditor::version_verdicts(
-                &[crate::modules::tech_stack::TechComponent {
+            let v = crate::modules::tech_stack::TechStackAuditor::version_verdicts(&[
+                crate::modules::tech_stack::TechComponent {
                     name: name.clone(),
                     version: version.clone(),
-                }],
-            );
+                },
+            ]);
             let v0 = v.first();
             tx.execute(
                 "INSERT INTO audit_tech (scan_id, name, version, source, is_eol, branch_min) VALUES ($1, $2, $3, 'http-header', $4, $5)",
@@ -473,15 +473,15 @@ impl DatabaseManager {
                 }
                 for t in &probe.technologies {
                     if let Some((name, version)) = audit_tech_parse_httpx_token(t) {
-                        if ! tech_seen.insert((name.clone(), version.clone())) {
+                        if !tech_seen.insert((name.clone(), version.clone())) {
                             continue;
                         }
-                        let v = crate::modules::tech_stack::TechStackAuditor::version_verdicts(
-                            &[crate::modules::tech_stack::TechComponent {
+                        let v = crate::modules::tech_stack::TechStackAuditor::version_verdicts(&[
+                            crate::modules::tech_stack::TechComponent {
                                 name: name.clone(),
                                 version: version.clone(),
-                            }],
-                        );
+                            },
+                        ]);
                         let v0 = v.first();
                         tx.execute(
                             "INSERT INTO audit_tech (scan_id, name, version, source, is_eol, branch_min) VALUES ($1, $2, $3, 'httpx', $4, $5)",
@@ -948,7 +948,7 @@ fn audit_tech_parse_token(raw: &str) -> Option<(String, String)> {
     }
     let head = s.split([' ', '(', ',', ';']).next().unwrap_or("");
     let head = head.trim();
-    if head.is_empty() || ! head.contains('/') {
+    if head.is_empty() || !head.contains('/') {
         return None;
     }
     let (name, ver_part) = head.split_once('/')?;
@@ -957,9 +957,19 @@ fn audit_tech_parse_token(raw: &str) -> Option<(String, String)> {
         return None;
     }
     let lower = name.to_ascii_lowercase();
-    if matches!(lower.as_str(), "cloudflare" | "varnish" | "bunnynet" | "ddos-guard"
-                                       | "imperva" | "incapsula" | "bitninja"
-                                       | "akamai" | "fastly" | "sucuri") {
+    if matches!(
+        lower.as_str(),
+        "cloudflare"
+            | "varnish"
+            | "bunnynet"
+            | "ddos-guard"
+            | "imperva"
+            | "incapsula"
+            | "bitninja"
+            | "akamai"
+            | "fastly"
+            | "sucuri"
+    ) {
         return None;
     }
     let ver = ver_part.trim().trim_start_matches('v');
@@ -977,7 +987,7 @@ fn audit_tech_parse_token(raw: &str) -> Option<(String, String)> {
             break;
         }
     }
-    if ! saw_digit || ! saw_dot {
+    if !saw_digit || !saw_dot {
         return None;
     }
     let ver = acc.trim_end_matches('.').to_string();
@@ -999,14 +1009,13 @@ fn audit_tech_parse_httpx_token(raw: &str) -> Option<(String, String)> {
         if name.is_empty() || name.len() > 64 || ver.is_empty() {
             return None;
         }
-        if ! ver.chars().any(|c| c.is_ascii_digit()) || ! ver.contains('.') {
+        if !ver.chars().any(|c| c.is_ascii_digit()) || !ver.contains('.') {
             return None;
         }
         return Some((name.to_string(), ver.to_string()));
     }
     None
 }
-
 
 #[cfg(test)]
 mod tests_fallback {
