@@ -365,10 +365,22 @@ impl TechStackAuditor {
             .filter_map(|c| {
                 let pv = parse_version(&c.version)?;
                 let branch = [pv[0], pv[1]];
-                let lower = c.name.to_lowercase();
-                let (_, threshold) = THRESHOLDS
-                    .iter()
-                    .find(|(k, _)| lower.contains(k))?;
+                // Matching par MOTS ENTIERS : "Apache HTTP Server" -> mots
+                // [apache, http, server] matche "apache" ; "mod_perl" est UN
+                // seul mot (underscore intra-mot) et ne matche plus "perl".
+                // Un contains() nu faisait des faux EOL sur les wrappers
+                // embarquant un nom de langage (mod_perl vs perl).
+                let words: Vec<String> = c
+                    .name
+                    .to_lowercase()
+                    .split([' ', '/', '-'])
+                    .filter(|w| !w.is_empty())
+                    .map(|w| w.to_string())
+                    .collect();
+                let (_, threshold) = THRESHOLDS.iter().find(|(k, _)| {
+                    words.iter().any(|w| w == k)
+                        || c.name.to_lowercase().starts_with(k)
+                })?;
                 if branch >= *threshold {
                     return None; // branche maintenue (patch-lag ≠ EOL)
                 }
@@ -592,8 +604,8 @@ pub(crate) const THRESHOLDS: &[(&str, [u32; 2])] = &[
     ("perl", [5, 32]),
     ("java", [11, 0]),
     ("openssl", [1, 1]),
-    ("asp.net", [4, 8]),
-    ("asp", [4, 8]),
+    // ASP/ASP.NET retirés : la version rapportée (4.0.30319) est celle du CLR,
+    // identique pour TOUT le .NET Framework 4.x — signal non exploitable.
     ("node", [18, 0]),
     // CMS
     ("wordpress", [6, 0]),
@@ -746,6 +758,28 @@ mod tests {
             },
         ];
         assert!(TechStackAuditor::version_verdicts(&comps).is_empty());
+    }
+
+    #[test]
+    fn test_no_eol_on_wrapper_products() {
+        // mod_perl versionne en 2.0.x — ne doit JAMAIS matcher le seuil perl
+        let comps = vec![
+            TechComponent {
+                name: "mod_perl".into(),
+                version: "2.0.12".into(),
+            },
+            TechComponent {
+                name: "Microsoft HTTPAPI".into(),
+                version: "2.0".into(),
+            },
+        ];
+        assert!(TechStackAuditor::version_verdicts(&comps).is_empty());
+        // mais le produit réel matche toujours
+        let comps = vec![TechComponent {
+            name: "Apache HTTP Server".into(),
+            version: "2.2.15".into(),
+        }];
+        assert_eq!(TechStackAuditor::version_verdicts(&comps).len(), 1);
     }
 
     #[test]
