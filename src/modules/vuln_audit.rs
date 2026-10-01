@@ -97,7 +97,7 @@ impl VulnAuditor {
         }
 
         // E. Audit CORS (Test avec Origin externe)
-        Self::check_cors(domain, custom_ports, &mut res);
+        Self::check_cors(domain, custom_ports, reduced_budget, &mut res);
 
         res
     }
@@ -281,7 +281,12 @@ impl VulnAuditor {
         }
     }
 
-    fn check_cors(domain: &str, custom_ports: &[u16], res: &mut VulnAuditResult) {
+    fn check_cors(
+        domain: &str,
+        custom_ports: &[u16],
+        reduced_budget: bool,
+        res: &mut VulnAuditResult,
+    ) {
         // HTTPS d'abord, fallback HTTP — même règle que le fetch du HTML.
         let hostport = crate::utils::host_with_port(domain, custom_ports);
         // Edge-guard web (anomalie C) : meme ideologie que pour le HTML fetch
