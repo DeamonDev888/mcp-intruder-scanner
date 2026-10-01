@@ -327,7 +327,9 @@ impl AuditOrchestrator {
             Some(thread::spawn(move || {
                 let t0 = Instant::now();
                 tracker_c.set_running(idx, "Exécution templates CVEs & failles critiques...");
-                run_guarded(t0, &tracker_c, idx, "Nuclei", || NucleiAuditor::audit(&t))
+                run_guarded(t0, &tracker_c, idx, "Nuclei", || {
+                    NucleiAuditor::audit(&t, false)
+                })
             }))
         } else {
             None
@@ -339,7 +341,9 @@ impl AuditOrchestrator {
             Some(thread::spawn(move || {
                 let t0 = Instant::now();
                 tracker_c.set_running(idx, "Scan des 6700+ fichiers dangereux & config HTTP...");
-                run_guarded(t0, &tracker_c, idx, "Nikto", || NiktoAuditor::audit(&t))
+                run_guarded(t0, &tracker_c, idx, "Nikto", || {
+                    NiktoAuditor::audit(&t, false)
+                })
             }))
         } else {
             None
