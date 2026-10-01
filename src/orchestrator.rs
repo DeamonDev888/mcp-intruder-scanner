@@ -314,7 +314,7 @@ impl AuditOrchestrator {
                 let t0 = Instant::now();
                 tracker_c.set_running(idx, "Fuzzing routes sensibles via SecLists quickhits...");
                 run_guarded(t0, &tracker_c, idx, "Ffuf", move || {
-                    FfufAuditor::audit(&t, &ffuf_ports)
+                    FfufAuditor::audit(&t, &ffuf_ports, false)
                 })
             }))
         } else {
