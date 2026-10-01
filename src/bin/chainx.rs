@@ -247,20 +247,25 @@ fn dispatch_target(target: &str, force: bool) {
         t = esc(target),
     ));
     if !keys.is_empty() && (force || !has_recent_verdict("keyprobe", target)) {
-        let key = &keys[0][0];
-        let (code, out) = run_bin("keyprobe", &[], Some(&format!("{key}\n")));
+        // Toutes les clés en stdin (keyprobe boucle ligne par ligne) :
+        // une seule exécution, verdict global, nombre de clés dans la preuve.
+        let all_keys = keys
+            .iter()
+            .filter_map(|r| r.first().cloned())
+            .collect::<Vec<_>>()
+            .join("\n");
+        let (code, out) = run_bin("keyprobe", &[], Some(&format!("{all_keys}\n")));
         let verdict = if code == 0 { "VALIDE" } else { "INVALIDE" };
         println!("  keyprobe → {verdict} ({} clé(s))", keys.len());
         save_verdict(
             "keyprobe",
             target,
             verdict,
-            out.lines().next().unwrap_or(""),
-            &format!(
-                "{}**** ({} chars)",
-                &key[..4.min(key.len())],
-                key.chars().count()
-            ),
+            &out.lines()
+                .take(keys.len().min(3))
+                .collect::<Vec<_>>()
+                .join(" | "),
+            &format!("{} clé(s) vérifiée(s) — masquées", keys.len()),
         );
     }
 

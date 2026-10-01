@@ -280,10 +280,13 @@ impl AuditOrchestrator {
         let handle_sslscan = if let Some(idx) = idx_sslscan {
             let tracker_c = Arc::clone(&tracker);
             let t = target.clone();
+            let ssl_ports = config.custom_ports.clone().unwrap_or_default();
             Some(thread::spawn(move || {
                 let t0 = Instant::now();
                 tracker_c.set_running(idx, "Test des ciphers TLS 1.0-1.3 & Heartbleed...");
-                run_guarded(t0, &tracker_c, idx, "SSLScan", || SslscanAuditor::audit(&t))
+                run_guarded(t0, &tracker_c, idx, "SSLScan", || {
+                    SslscanAuditor::audit(&t, &ssl_ports)
+                })
             }))
         } else {
             None

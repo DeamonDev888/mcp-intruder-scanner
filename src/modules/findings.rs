@@ -736,7 +736,7 @@ impl FindingsEngine {
                 severity: "INFO",
                 category: "GEO",
                 title: format!("Hébergement hors Canada détecté : Pays '{}'", geo.country_code.as_deref().unwrap_or("Inconnu")),
-                recommendation: "Information géographique issue du whois — vérifier la politique de transfert de données applicable à votre contexte.".into(),
+                recommendation: "Information géographique issue du whois — utile pour délimiter le périmètre dhébergement et identifier les fournisseurs impliqués.".into(),
             });
         }
         findings

@@ -50,6 +50,10 @@ impl FullPortScanner {
         per_connect_timeout: Duration,
         open_callback: Option<F>,
     ) -> Vec<FullPortScanResult> {
+        // Garde anti-underflow : plage inversée = rien à scanner.
+        if end < start {
+            return Vec::new();
+        }
         // Résolution UNE fois (65535 to_socket_addrs = interdit).
         let addr = format!("{}:443", target)
             .to_socket_addrs()

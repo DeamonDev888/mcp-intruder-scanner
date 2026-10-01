@@ -167,7 +167,7 @@ impl WafAuditor {
                     "Pare-feu applicatif (WAF) actif : {} ({})",
                     res.firewall_name, res.manufacturer
                 ),
-                recommendation: "Vérifier que le WAF ne transite pas les données hors de la juridiction requise par votre politique interne.".to_string(),
+                recommendation: "Prendre en compte le WAF dans les tests applicatifs ultérieurs : ses règles de filtrage peuvent nécessiter des techniques dévasion (encodage, fragmentation des requêtes).".to_string(),
             });
         } else {
             findings.push(SecurityFinding {
