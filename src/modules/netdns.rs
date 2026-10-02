@@ -198,7 +198,16 @@ pub fn query(qname: &str, qtype: &str, timeout: Duration) -> Option<DnsAnswer> {
     if n < 12 || buf[0] != q[0] || buf[1] != q[1] {
         return None; // pas notre réponse
     }
-    parse_response(&buf[..n])
+    let mut ans = parse_response(&buf[..n])?;
+    // Un nom porte souvent une chaine CNAME : le resolveur renvoie alors les
+    // CNAME de la chaine POUR TOUT type demande. Sans ce filtre, requeter MX
+    // sur un nom en CNAME retourne la chaine CNAME, qui atterrit alors dans
+    // mx_records / txt_records / ns_records / caa_records (verifie live : les
+    // 5 types demandes renvoyaient la meme liste de 3 CNAME).
+    // On ne garde que le type reellement demande ; la chaine CNAME reste
+    // resolue par le systeme et l IP finale est deja recuperee via A/AAAA.
+    ans.answers.retain(|(_, rtype)| *rtype == qt);
+    Some(ans)
 }
 
 fn system_resolver() -> Option<String> {
