@@ -236,8 +236,50 @@ impl AuditOrchestrator {
         // dans leur closure. Comme le join WAF (~5-10s) precede le spawn des
         // threads web (voir plus bas), le flag est en pratique toujours set
         // avant que les modules commencent a travailler.
+        // === EDGE-GUARD : WAF joint AVANT tout spawn de module web ============
+        // P0-2 : le flag doit etre set AVANT que les modules web ne le lisent.
+        // wafw00f est rapide (5-10 s) et ce join etait de toute facon dans le
+        // chemin critique ; le parallélisme des autres modules est preserve.
+        let handle_waf = if let Some(idx) = idx_waf {
+            let tracker_c = Arc::clone(&tracker);
+            let t = target.clone();
+            Some(thread::spawn(move || {
+                let t0 = Instant::now();
+                tracker_c.set_running(idx, "Envoi requêtes forgées & empreinte WAF...");
+                run_guarded(t0, &tracker_c, idx, "Wafw00f", || WafAuditor::audit(&t))
+            }))
+        } else {
+            None
+        };
+        let waf_result = handle_waf.map(|h| h.join().unwrap_or_default());
+        let mut edge_is_waf = false;
+        if let Some(ref w) = waf_result {
+            edge_is_waf = w.waf_detected
+                && matches!(
+                    w.firewall_name.as_str(),
+                    "Imperva"
+                        | "Incapsula"
+                        | "Cloudflare"
+                        | "BitNinja"
+                        | "Akamai"
+                        | "Fastly"
+                        | "Sucuri"
+                );
+        }
+
         let web_reduced: std::sync::Arc<std::sync::OnceLock<bool>> =
             std::sync::Arc::new(std::sync::OnceLock::new());
+        // P0-2 : set() DOIT preceder les spawns des modules web (vuln/ffuf/
+        // nuclei/nikto/obscura) qui lisent le flag dans leur closure.
+        let _ = web_reduced.set(edge_is_waf);
+        if let Some(ref w) = waf_result {
+            if edge_is_waf {
+                eprintln!(
+                    "[edge-guard] {} : WAF {} detecte, budget reduit active pour vuln/ffuf/nuclei/nikto/obscura",
+                    target, w.firewall_name
+                );
+            }
+        }
         let web_reduced_vuln = std::sync::Arc::clone(&web_reduced);
         let handle_vuln = thread::spawn(move || {
             let t0 = Instant::now();
@@ -260,18 +302,6 @@ impl AuditOrchestrator {
         });
 
         // 3. Spawning des modules Kali en arrière-plan
-        let handle_waf = if let Some(idx) = idx_waf {
-            let tracker_c = Arc::clone(&tracker);
-            let t = target.clone();
-            Some(thread::spawn(move || {
-                let t0 = Instant::now();
-                tracker_c.set_running(idx, "Envoi requêtes forgées & empreinte WAF...");
-                run_guarded(t0, &tracker_c, idx, "Wafw00f", || WafAuditor::audit(&t))
-            }))
-        } else {
-            None
-        };
-
         let ww_ports = config.custom_ports.clone().unwrap_or_default();
         let handle_whatweb = if let Some(idx) = idx_whatweb {
             let tracker_c = Arc::clone(&tracker);
@@ -560,27 +590,8 @@ impl AuditOrchestrator {
         // ajoute est negligeable. Les modules ci-dessus (ports, geo, dns,
         // subs, http, dns_h, whatweb, sslscan, dnstwist, whois, dnsrecon,
         // theharvester, rustscan, nmap) restent parallises.
-        let waf_result = handle_waf.map(|h| h.join().unwrap_or_default());
-        if let Some(ref w) = waf_result {
-            let is_edge = w.waf_detected
-                && matches!(
-                    w.firewall_name.as_str(),
-                    "Imperva"
-                        | "Incapsula"
-                        | "Cloudflare"
-                        | "BitNinja"
-                        | "Akamai"
-                        | "Fastly"
-                        | "Sucuri"
-                );
-            let _ = web_reduced.set(is_edge);
-            if is_edge {
-                eprintln!(
-                    "[edge-guard] {} : WAF {} detecte, budget reduit active pour vuln/ffuf/nuclei/nikto/obscura",
-                    target, w.firewall_name
-                );
-            }
-        }
+        // Le filtre edge ports (plus bas) a besoin de waf_result ET de
+        // port_results deja joint : rien a faire ici, le resultat est conserve.
 
         // === GARDE-FOU EDGE (post-livraison v0.5.5) ==============================
         // Si w a remonte un WAF edge-uniforme (Imperva/Cloudflare/BitNinja), les
@@ -589,19 +600,8 @@ impl AuditOrchestrator {
         // artefacts de l edge qui repond TCP partout. On les retire du rapport
         // (mais on les laisse dans documente le calcul open_ports_count pour
         // l observabilite du test : le test unitaire impact_filter_regression le verifie).
-        if let Some(ref w) = waf_result {
-            if w.waf_detected
-                && matches!(
-                    w.firewall_name.as_str(),
-                    "Imperva"
-                        | "Incapsula"
-                        | "Cloudflare"
-                        | "BitNinja"
-                        | "Akamai"
-                        | "Fastly"
-                        | "Sucuri"
-                )
-            {
+        if let Some(ref _w) = waf_result {
+            if edge_is_waf {
                 const WELL_KNOWN: &[u16] = &[
                     21, 22, 25, 53, 80, 81, 110, 143, 443, 465, 587, 995, 993, 1080, 1194, 1433,
                     1521, 1723, 1883, 2049, 2082, 2083, 2086, 2087, 2095, 2096, 3306, 3389, 4443,
@@ -726,8 +726,11 @@ impl AuditOrchestrator {
             &crt_sh_result,
         );
         if crt_added > 0 {
-            println!(
-                ">>> [CRT.SH] {crt_added} sous-domaine(s) historique(s) ajouté(s) via Certificate Transparency"
+            // P0-1 : stdout est reserve au document JSON en --json mode.
+            // Un println! ici rendait le rapport illisible par tout
+            // consommateur (verifie live : cascades.com, 342 sous-domaines CT).
+            eprintln!(
+                "[CRT.SH] {crt_added} sous-domaine(s) historique(s) ajouté(s) via Certificate Transparency"
             );
         }
 
