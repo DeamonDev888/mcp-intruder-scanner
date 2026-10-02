@@ -131,6 +131,47 @@ impl DnsAuditor {
             }
         }
 
+        // Fallback apex — DOIT preceder les analyses SPF et DMARC (sinon le
+        // finding « absent » est emis avant que l apex soit consulte).
+        // Un sous-domaine (www.) n'heberge presque jamais la politique :
+        // celle-ci vit sur le domaine registrable. Verifie live :
+        // www.example.org muet, apex = v=spf1 ... ~all ;
+        // www.pharma.example.com muet, apex = v=spf1 + DMARC p=reject.
+        // L'hote doit avoir au moins 3 labels pour que l'apex differe.
+        if result.txt_records.is_empty() {
+            let apex = Self::registrable_domain(domain);
+            if apex != domain {
+                let mut apex_txt: Vec<String> = Vec::new();
+                if let Some(ans) =
+                    crate::modules::netdns::query(&apex, "TXT", std::time::Duration::from_secs(2))
+                {
+                    for (v, _) in &ans.answers {
+                        let t = v.trim().trim_matches('"').to_string();
+                        if !t.is_empty() {
+                            apex_txt.push(t);
+                        }
+                    }
+                }
+                if apex_txt.is_empty() {
+                    if let Some(output) = crate::utils::run_tool(
+                        "dig",
+                        &["+noall", "+answer", "+time=2", "+tries=1", "TXT", &apex],
+                        8,
+                    ) {
+                        apex_txt = Self::dig_records_of_type(&output.stdout, "TXT");
+                    }
+                }
+                for t in apex_txt {
+                    result.txt_records.push(t.clone());
+                    result.all_records.push(DnsRecordEntry {
+                        record_type: "TXT".to_string(),
+                        value: format!("[apex {apex}] {t}"),
+                        is_secure: false,
+                    });
+                }
+            }
+        }
+
         // 4. Analyse SPF
         for txt in &result.txt_records {
             if txt.starts_with("v=spf1") {
@@ -385,49 +426,6 @@ fn dig_records_of_type(output: &[u8], rtype: &str) -> Vec<String> {
                     value: "DNSSEC actif (flag AD validé par le résolveur)".to_string(),
                     is_secure: false,
                 });
-            }
-        }
-
-        // Fallback apex : un sous-domaine (www.) n'héberge presque jamais le
-        // SPF — la politique vit sur le domaine registrable. Évite le faux
-        // positif « SPF absent » (vérifié live : www.pharma.example.com muet,
-        // apex = v=spf1 + DMARC p=reject).
-        if result.txt_records.is_empty() {
-            let apex = Self::registrable_domain(domain);
-            if apex != domain {
-                let mut apex_txt: Vec<String> = Vec::new();
-                if let Some(ans) =
-                    crate::modules::netdns::query(&apex, "TXT", std::time::Duration::from_secs(2))
-                {
-                    for (v, _) in &ans.answers {
-                        let t = v.trim().trim_matches('"').to_string();
-                        if !t.is_empty() {
-                            apex_txt.push(t);
-                        }
-                    }
-                }
-                if apex_txt.is_empty() {
-                    if let Some(output) = crate::utils::run_tool(
-                        "dig",
-                        &["+short", "+time=2", "+tries=1", "TXT", &apex],
-                        8,
-                    ) {
-                        for line in String::from_utf8_lossy(&output.stdout).lines() {
-                            let trimmed = line.trim().trim_matches('"');
-                            if !trimmed.is_empty() {
-                                apex_txt.push(trimmed.to_string());
-                            }
-                        }
-                    }
-                }
-                for t in apex_txt {
-                    result.txt_records.push(t.clone());
-                    result.all_records.push(DnsRecordEntry {
-                        record_type: "TXT".to_string(),
-                        value: format!("[apex {apex}] {t}"),
-                        is_secure: false,
-                    });
-                }
             }
         }
 
