@@ -9,6 +9,11 @@
 //! - subprocess via args() uniquement, jamais `sh -c` ;
 //! - secrets jamais affichés en clair : masqués avant affichage.
 
+/// Tableau de bord web : serveur HTTP local qui lit le catalogue
+/// PostgreSQL et rend l'interface. Declare ici pour que le binaire
+/// `src/bin/dashboard.rs` puisse l'importer via `mcp_intruder::dash`.
+pub mod dash;
+
 use std::process::{Command, Stdio};
 
 /// Réponse HTTP minimale (via curl, zéro dépendance).
