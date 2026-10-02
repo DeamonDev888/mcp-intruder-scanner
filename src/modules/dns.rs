@@ -199,6 +199,33 @@ impl DnsAuditor {
         }
     }
 
+/// Lignes `dig +noall +answer` du seul type demande.
+///
+/// `dig +short` ne filtre rien : sur un nom qui porte une chaine CNAME, il
+/// renvoie les CNAME de la chaine pour TOUT type demande. C'est ainsi qu'une
+/// liste de CNAME atterrissait dans mx_records, txt_records, ns_records ET
+/// caa_records (verifie en base sur www.example.org). On exige
+/// donc explicitement le champ TYPE, et la chaine CNAME de resolution est
+/// ecartee : les IP finales sont de toute facon reprises via A/AAAA.
+fn dig_records_of_type(output: &[u8], rtype: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    for line in String::from_utf8_lossy(output).lines() {
+        let cols: Vec<&str> = line.split_whitespace().collect();
+        // format +noall +answer : <nom> <ttl> IN <TYPE> <rdata...>
+        if cols.len() < 5 || !cols[2].eq_ignore_ascii_case("IN") {
+            continue;
+        }
+        if !cols[3].eq_ignore_ascii_case(rtype) {
+            continue;
+        }
+        let trimmed = cols[4..].join(" ").trim_matches('"').trim().to_string();
+        if !trimmed.is_empty() {
+            out.push(trimmed);
+        }
+    }
+    out
+}
+
     fn enrich_via_dig(domain: &str, result: &mut DnsAuditResult) {
         // MX natif UDP
         let mut got_mx_records: Vec<String> = Vec::new();
@@ -214,14 +241,13 @@ impl DnsAuditor {
         }
         if got_mx_records.is_empty() {
             if let Some(output) =
-                crate::utils::run_tool("dig", &["+short", "+time=2", "+tries=1", "MX", domain], 8)
+                crate::utils::run_tool(
+                    "dig",
+                    &["+noall", "+answer", "+time=2", "+tries=1", "MX", domain],
+                    8,
+                )
             {
-                for line in String::from_utf8_lossy(&output.stdout).lines() {
-                    let trimmed = line.trim().trim_matches('"');
-                    if !trimmed.is_empty() {
-                        got_mx_records.push(trimmed.to_string());
-                    }
-                }
+                got_mx_records = Self::dig_records_of_type(&output.stdout, "MX");
             }
         }
         for t in got_mx_records {
@@ -246,14 +272,13 @@ impl DnsAuditor {
         }
         if got_ns_records.is_empty() {
             if let Some(output) =
-                crate::utils::run_tool("dig", &["+short", "+time=2", "+tries=1", "NS", domain], 8)
+                crate::utils::run_tool(
+                    "dig",
+                    &["+noall", "+answer", "+time=2", "+tries=1", "NS", domain],
+                    8,
+                )
             {
-                for line in String::from_utf8_lossy(&output.stdout).lines() {
-                    let trimmed = line.trim().trim_matches('"');
-                    if !trimmed.is_empty() {
-                        got_ns_records.push(trimmed.to_string());
-                    }
-                }
+                got_ns_records = Self::dig_records_of_type(&output.stdout, "NS");
             }
         }
         for t in got_ns_records {
@@ -278,14 +303,13 @@ impl DnsAuditor {
         }
         if got_txt_records.is_empty() {
             if let Some(output) =
-                crate::utils::run_tool("dig", &["+short", "+time=2", "+tries=1", "TXT", domain], 8)
+                crate::utils::run_tool(
+                    "dig",
+                    &["+noall", "+answer", "+time=2", "+tries=1", "TXT", domain],
+                    8,
+                )
             {
-                for line in String::from_utf8_lossy(&output.stdout).lines() {
-                    let trimmed = line.trim().trim_matches('"');
-                    if !trimmed.is_empty() {
-                        got_txt_records.push(trimmed.to_string());
-                    }
-                }
+                got_txt_records = Self::dig_records_of_type(&output.stdout, "TXT");
             }
         }
         for t in got_txt_records {
@@ -325,14 +349,13 @@ impl DnsAuditor {
         }
         if got_caa_records.is_empty() {
             if let Some(output) =
-                crate::utils::run_tool("dig", &["+short", "+time=2", "+tries=1", "CAA", domain], 8)
+                crate::utils::run_tool(
+                    "dig",
+                    &["+noall", "+answer", "+time=2", "+tries=1", "CAA", domain],
+                    8,
+                )
             {
-                for line in String::from_utf8_lossy(&output.stdout).lines() {
-                    let trimmed = line.trim().trim_matches('"');
-                    if !trimmed.is_empty() {
-                        got_caa_records.push(trimmed.to_string());
-                    }
-                }
+                got_caa_records = Self::dig_records_of_type(&output.stdout, "CAA");
             }
         }
         for t in got_caa_records {
