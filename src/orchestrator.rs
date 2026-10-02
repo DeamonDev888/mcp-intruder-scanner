@@ -673,6 +673,11 @@ impl AuditOrchestrator {
         let theharvester_result = handle_theharvester.map(|h| h.join().unwrap_or_default());
         let obscura_result = handle_obscura.map(|h| h.join().unwrap_or_default());
 
+        // P1-1 : durees REELLES des outils, et non la duree totale du scan.
+        // Instant est Copy : la mesure apres run_guarded est exacte.
+        let mut httpx_elapsed: f32 = 0.0;
+        let mut sqli_elapsed: f32 = 0.0;
+
         // Httpx : probe séquentiel APRÈS subdomains — prober racine + tous les
         // sous-domaines découverts par subfinder (c'est là toute la valeur)
         let httpx_result = if config.tools.httpx {
@@ -689,6 +694,7 @@ impl AuditOrchestrator {
                     &format!("Probe httpx sur {} cible(s)...", targets.len()),
                 );
                 let res = run_guarded(t0, &tracker, idx, "Httpx", || probe_parallel(targets, 40));
+                httpx_elapsed = t0.elapsed().as_secs_f32();
                 Some(res)
             } else {
                 None
@@ -740,6 +746,8 @@ impl AuditOrchestrator {
             crate::modules::http_probe::merge_into_subdomains(&mut subdomains_result, hp);
         }
 
+        // P1-1 : durees REELLES des outils (et non la duree totale du scan).
+
         // SQLMap : dépend des endpoints découverts — tourne en fin de chaîne
         let sqli_result = if config.tools.sqlmap {
             if let Some(idx) = idx_sqlmap {
@@ -748,6 +756,7 @@ impl AuditOrchestrator {
                 let urls: Vec<String> =
                     vec![format!("https://{}", target), format!("http://{}", target)];
                 let res = run_guarded(t0, &tracker, idx, "SQLMap", || scan_urls_parallel(urls, 60));
+                sqli_elapsed = t0.elapsed().as_secs_f32();
                 Some(res)
             } else {
                 None
@@ -969,6 +978,8 @@ impl AuditOrchestrator {
             httpx_result,
             rustscan_result,
             sqli_result,
+            httpx_elapsed,
+            sqli_elapsed,
             loot_result,
             box_probe_result,
             smb_audit_result,

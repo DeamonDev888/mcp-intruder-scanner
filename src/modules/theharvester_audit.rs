@@ -6,6 +6,8 @@ pub struct TheHarvesterResult {
     pub hosts: Vec<String>,
     pub emails: Vec<String>,
     pub ips: Vec<String>,
+    /// P1-2 : code de sortie REEL de theHarvester.
+    pub success: bool,
     pub execution_time_seconds: f32,
     pub raw_output: String,
 }
@@ -31,8 +33,12 @@ impl TheHarvesterAuditor {
 
         result.execution_time_seconds = start.elapsed().as_secs_f32();
 
-        if let Some(out) = cmd_res {
-            result.raw_output = String::from_utf8_lossy(&out.stdout).to_string();
+        match cmd_res {
+            Some(out) => {
+                result.success = out.status.success();
+                result.raw_output = String::from_utf8_lossy(&out.stdout).to_string();
+            }
+            None => result.success = false,
         }
 
         let json_path = format!("{base_path}.json");

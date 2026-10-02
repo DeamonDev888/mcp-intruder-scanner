@@ -376,13 +376,31 @@ impl FindingsEngine {
             });
         }
 
-        if http_service_present && !http.hsts_present {
-            findings.push(SecurityFinding {
-                severity: "HIGH",
-                category: "HTTP",
-                title: "En-tête Strict-Transport-Security (HSTS) manquant".into(),
-                recommendation: "Ajouter 'Strict-Transport-Security: max-age=31536000; includeSubDomains; preload'.".into(),
-            });
+        // P1-3 : un attribut de TRANSPORT ne s'evalue que sur une reponse TLS.
+        // Sur une reponse cleartext, l'absence de HSTS ne prouve rien (faux
+        // positif mesure sur 100 scans, score moyen 30,6). Dans ce cas : INFO,
+        // jamais HIGH.
+        if http_service_present {
+            match http.hsts_present {
+                Some(true) => {}
+                Some(false) => {
+                    findings.push(SecurityFinding {
+                        severity: "HIGH",
+                        category: "HTTP",
+                        title: "En-tête Strict-Transport-Security (HSTS) manquant".into(),
+                        recommendation: "Ajouter 'Strict-Transport-Security: max-age=31536000; includeSubDomains; preload'.".into(),
+                    });
+                }
+                None => {
+                    findings.push(SecurityFinding {
+                        severity: "INFO",
+                        category: "HTTP",
+                        title: "HSTS non évaluable : la réponse analysée était en cleartext".into(),
+                        recommendation:
+                            "Rejouer l'audit sur https://<cible>/ pour évaluer la présence de Strict-Transport-Security.".into(),
+                    });
+                }
+            }
         }
 
         if http_service_present
@@ -1162,7 +1180,8 @@ mod tests {
         // Service présent : cookie non durci signalé + HSTS max-age trop court
         let http = HttpAuditResult {
             http_status: 200,
-            hsts_present: true,
+            hsts_present: Some(true),
+            response_was_tls: true,
             hsts_value: Some("max-age=86400".into()),
             csp_present: true,
             csp_value: Some("script-src 'unsafe-inline'".into()),

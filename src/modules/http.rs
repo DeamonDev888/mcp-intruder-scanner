@@ -26,8 +26,14 @@ pub struct HttpAuditResult {
     pub redirects_to_https: bool,
     pub server_header: Option<String>,
     pub powered_by: Option<String>,
-    pub hsts_present: bool,
+    /// `None` = NON EVALUABLE : la reponse analysee etait en cleartext, donc
+    /// l'absence de HSTS ne prouve rien (le CDN peut en servir un en TLS).
+    /// `Some(false)` = evalue sur TLS et absent.
+    pub hsts_present: Option<bool>,
     pub hsts_value: Option<String>,
+    /// `true` si la reponse dont les en-tetes ont ete lus etait servie en TLS.
+    /// Conditionne l'evaluation de `hsts_present`.
+    pub response_was_tls: bool,
     pub csp_present: bool,
     pub csp_value: Option<String>,
     pub x_frame_options: Option<String>,
@@ -195,13 +201,18 @@ impl HttpAuditor {
         let server_header = headers.get("server").cloned();
         let powered_by = headers.get("x-powered-by").cloned();
 
+        let response_was_tls = used_url.starts_with("https://");
         let hsts_value = headers.get("strict-transport-security").cloned();
         let csp_value = headers.get("content-security-policy").cloned();
         let x_frame_options = headers.get("x-frame-options").cloned();
         let x_content_type_options = headers.get("x-content-type-options").cloned();
         let referrer_policy = headers.get("referrer-policy").cloned();
         let permissions_policy = headers.get("permissions-policy").cloned();
-        let hsts_present = hsts_value.is_some();
+        let hsts_present = if response_was_tls {
+            Some(hsts_value.is_some())
+        } else {
+            None
+        };
         let csp_present = csp_value.is_some();
 
         // Boucle data-driven sur SECURITY_HEADERS : libellé complet ->
@@ -268,6 +279,7 @@ impl HttpAuditor {
             server_header,
             powered_by,
             hsts_present,
+            response_was_tls,
             hsts_value,
             csp_present,
             csp_value,

@@ -48,10 +48,13 @@ impl VulnAuditor {
         // JS infini). On reduit max-time 5s -> 3s, deadline 600s -> 60s. Le HTML
         // derriere WAF est de toute facon vide (page challenge), donc le reduire
         // ne change pas la couverture reelle.
+        // 300 s aligne sur nuclei_deep : vuln_audit etait le seul module
+        // capable de depasser a lui seul le budget total d'un scan (600 s)
+        // tout en faisant moins de requetes que nuclei.
         let (curl_max_time, curl_deadline) = if reduced_budget {
             (3u64, 60u64)
         } else {
-            (5u64, 600u64)
+            (5u64, 300u64)
         };
         if reduced_budget {
             eprintln!(

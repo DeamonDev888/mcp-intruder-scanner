@@ -10,6 +10,9 @@ pub struct WhoisResult {
     pub name_servers: Vec<String>,
     pub is_privacy_protected: bool,
     pub is_transfer_locked: bool,
+    /// P1-2 : code de sortie REEL de `whois`. false = absent, timeout, ou
+    /// echec. Avant, db.rs persistant inchangeablement SUCCESS.
+    pub success: bool,
     pub execution_time_seconds: f32,
     pub raw_output: String,
 }
@@ -25,11 +28,13 @@ impl WhoisAuditor {
             Some(out) => out,
             None => {
                 result.execution_time_seconds = start.elapsed().as_secs_f32();
+                result.success = false;
                 result.raw_output = "whois : timeout (30s) ou binaire introuvable".into();
                 return result;
             }
         };
 
+        result.success = output.status.success();
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         result.raw_output = stdout.clone();
 

@@ -382,7 +382,8 @@ fn test_findings_engine_evaluates_telnet_and_open_resolver() {
         redirects_to_https: true,
         server_header: None,
         powered_by: None,
-        hsts_present: true,
+        hsts_present: Some(true),
+        response_was_tls: true,
         hsts_value: Some("max-age=31536000".into()),
         csp_present: true,
         csp_value: Some("default-src 'self'".into()),
@@ -732,7 +733,8 @@ fn create_dummy_report(findings: Vec<SecurityFinding>) -> FullAuditReport {
             redirects_to_https: true,
             server_header: None,
             powered_by: None,
-            hsts_present: true,
+            hsts_present: Some(true),
+            response_was_tls: true,
             hsts_value: Some("max-age=31536000".into()),
             csp_present: true,
             csp_value: Some("default-src 'self'".into()),
@@ -833,6 +835,8 @@ fn create_dummy_report(findings: Vec<SecurityFinding>) -> FullAuditReport {
         None, // http_probe
         None, // rustscan
         None, // sqli
+        0.0,  // http_probe_seconds (P1-1)
+        0.0,  // sqli_seconds (P1-1)
         None, // loot
         None, // box_probe
         None, // smb_audit

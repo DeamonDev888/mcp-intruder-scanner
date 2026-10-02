@@ -56,6 +56,9 @@ pub struct FullAuditReport {
     pub http_probe: Option<Vec<crate::modules::http_probe::HttpProbeResult>>,
     pub rustscan: Option<crate::modules::portscan_rustscan::RustScanResult>,
     pub sqli: Option<Vec<crate::modules::sqli_audit::SqliFinding>>,
+    /// P1-1 : duree REELLE de l'outil, pas la duree totale du scan.
+    pub http_probe_seconds: f32,
+    pub sqli_seconds: f32,
     pub loot: Option<LootResult>,
     pub box_probe: Option<crate::modules::box_prober::BoxProbeResult>,
     pub smb_audit: Option<crate::modules::smb_audit::SmbAuditResult>,
@@ -95,6 +98,8 @@ impl FullAuditReport {
         http_probe: Option<Vec<crate::modules::http_probe::HttpProbeResult>>,
         rustscan: Option<crate::modules::portscan_rustscan::RustScanResult>,
         sqli: Option<Vec<crate::modules::sqli_audit::SqliFinding>>,
+        http_probe_seconds: f32,
+        sqli_seconds: f32,
         loot: Option<LootResult>,
         box_probe: Option<crate::modules::box_prober::BoxProbeResult>,
         smb_audit: Option<crate::modules::smb_audit::SmbAuditResult>,
@@ -144,6 +149,8 @@ impl FullAuditReport {
             http_probe,
             rustscan,
             sqli,
+            http_probe_seconds,
+            sqli_seconds,
             loot,
             box_probe,
             smb_audit,
@@ -426,7 +433,7 @@ impl FullAuditReport {
         );
         println!(
             "    • HSTS                 : {}",
-            if self.http.hsts_present {
+            if self.http.hsts_present == Some(true) {
                 "PRÉSENT [OK]"
             } else {
                 "MANQUANT [ALERTE]"

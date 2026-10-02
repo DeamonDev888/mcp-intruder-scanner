@@ -20,6 +20,8 @@ pub struct DnsreconResult {
     pub bind_versions: Vec<(String, String)>,
     pub nameservers: Vec<String>,
     pub soa_mname: Option<String>,
+    /// P1-2 : code de sortie REEL de dnsrecon.
+    pub success: bool,
     pub execution_time_seconds: f32,
     pub raw_output: String,
 }
@@ -45,8 +47,12 @@ impl DnsreconAuditor {
 
         result.execution_time_seconds = start.elapsed().as_secs_f32();
 
-        if let Some(out) = cmd_res {
-            result.raw_output = String::from_utf8_lossy(&out.stdout).to_string();
+        match cmd_res {
+            Some(out) => {
+                result.success = out.status.success();
+                result.raw_output = String::from_utf8_lossy(&out.stdout).to_string();
+            }
+            None => result.success = false,
         }
 
         // Nettoyage inconditionnel : même si la lecture échoue (fichier partiel, crash)
@@ -67,7 +73,10 @@ impl DnsreconAuditor {
                         let address = extract_json_str(&obj, "address").unwrap_or_default();
                         if !domain_str.is_empty()
                             && !address.is_empty()
-                            && domain_str.ends_with(domain)
+                            // Frontiere de point obligatoire : "evil.example.com"
+                            // ne doit PAS matcher "example.com" (regle 13).
+                            && (domain_str == domain
+                                || domain_str.ends_with(&format!(".{domain}")))
                             && !result
                                 .host_records
                                 .contains(&(domain_str.clone(), address.clone()))
