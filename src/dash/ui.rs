@@ -2345,9 +2345,16 @@ function secSurface(d){
     '</div></section>';
 }
 
+// Scans REELLEMENT en cours. `live` conserve l'historique du registre : un scan
+// arrete y reste avec state="stopped"/"done". Tester live.length>0 ferait dire
+// « scan en cours » pour un processus mort — ce que la section Machines
+// contredit (scanner_running=false). On filtre donc sur l'etat.
+function liveRunning(list){return (list||[]).filter(function(j){return (j.state||'')==='running';});}
+
 function secLive(d){
   var live=d.live||[],m=d.machine||{};
-  var running=m.scanner_running||live.length>0;
+  var act=liveRunning(live);
+  var running=m.scanner_running||act.length>0;
   var items=live.length?live:[{pid:0,target:d.target,profile:'—',started_at:d.scan_date,
     elapsed_s:0,state:m.scanner_running?'running':'idle',last_line:'—',log_path:''}];
   var tl=items.map(function(x){
@@ -2466,8 +2473,10 @@ function paintRail(){
 function paintLiveBar(){
   var lb=D.getElementById('livebar');if(!lb)return;
   var live=S.live||[],m=(S.data&&S.data.machine)||{};
-  var running=m.scanner_running||live.length>0;
-  var x=live[0]||{};
+  var act=liveRunning(live);
+  var running=m.scanner_running||act.length>0;
+  // On affiche le scan en cours s'il existe, sinon le plus recent de l'historique.
+  var x=act[0]||live[0]||{};
   lb.className='livebar'+(running?' show':'');
   lb.innerHTML=
     '<span class="livebar-k"><i class="pulse'+(running?' on':'')+'"></i>'+
