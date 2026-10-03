@@ -410,6 +410,18 @@ impl Server {
         // Thread d'acceptation : chaque connexion part dans son propre thread
         // pour qu'une requête lente (scan complet) ne bloque pas le reste.
         let srv = Arc::new(self);
+
+        // Amorce du compteur CPU : cpu_pct() compare deux lectures de /proc/stat,
+        // donc sans reference anterieure le PREMIER appel renvoie 0.0 et
+        // l'interface affiche « CPU 0 % » alors que la machine travaille. Deux
+        // lectures espacees de 200 ms etablissent la reference : la premiere
+        // page servie affiche donc une valeur reelle, pas zero.
+        {
+            let _ = machine::snapshot(&srv.db_name);
+            std::thread::sleep(Duration::from_millis(200));
+            let _ = machine::snapshot(&srv.db_name);
+        }
+
         for stream in listener.incoming() {
             let Ok(mut stream) = stream else { continue };
             let srv = Arc::clone(&srv);

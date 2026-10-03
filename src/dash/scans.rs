@@ -530,7 +530,7 @@ pub fn start(target: &str, profile: &str) -> Result<LiveScan, String> {
     let running = live.iter().filter(|s| s.state == "running").count();
     if running >= MAX_CONCURRENT {
         return Err(format!(
-            "已达 limite de scans simultanés (max {MAX_CONCURRENT})"
+            "limite de scans simultanés atteinte (max {MAX_CONCURRENT})"
         ));
     }
 

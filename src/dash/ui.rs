@@ -1840,7 +1840,7 @@ var TIPS={
   crit:'Constat critique : une faille sérieuse, à corriger en priorité. Ne l’ignorez pas.',
   high:'Constat important : à traiter rapidement, mais moins grave que le critique.',
   modules:'Chaque case est un module du scanner (un type de test). Le nombre indique ce qu’il a trouvé sur la cible affichée.',
-  coverage:'La couverture dit si le module a pu analyser la cible : 0 = rien, 1 = à moitié, 2 = complet. Un module avec 0 n’a rien性状一句话: rien n’a été analysé.',
+  coverage:'La couverture dit si le module a pu analyser la cible : 0 = rien, 1 = à moitié, 2 = complet. Un module à 0 n’a rien analysé du tout.',
   machine:'L’état de la machine qui fait tourner le scanner : processeur, mémoire, disque, réseau, services. Si le CPU ou la RAM sont saturés, les scans ralentissent.',
   scans:'L’historique des scans : cible analysée, date, score obtenu, ports trouvés, problèmes détectés, durée.',
   findings:'Les problèmes de sécurité, du plus grave au moins grave. Chaque ligne dit ce qu’il faut faire.',

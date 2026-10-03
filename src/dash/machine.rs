@@ -541,7 +541,7 @@ mod tests {
         let nested = r#"{"1":{"state":"running","meta":{"state":"stopped"}}}"#;
         assert_eq!(count_running_jobs(nested), 1);
 
-        // États定義 indéfinis => rien n'est compté comme actif.
+        // États indéfinis => rien n'est compté comme actif.
         assert_eq!(count_running_jobs("{}"), 0);
         assert_eq!(count_running_jobs("not json"), 0);
         assert_eq!(count_running_jobs(""), 0);
