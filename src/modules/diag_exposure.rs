@@ -93,12 +93,14 @@ impl ProbeKind {
                                 || t.contains("TOKEN"))
                     })
                     .count();
-                if hits >= 2 { "env_keyvalue" } else { "" }
+                if hits >= 2 {
+                    "env_keyvalue"
+                } else {
+                    ""
+                }
             }
             ProbeKind::ServerStatus => {
-                if body.contains("Apache Server Status")
-                    || body.contains("apache2-server-status")
-                {
+                if body.contains("Apache Server Status") || body.contains("apache2-server-status") {
                     "apache_server_status"
                 } else {
                     ""
@@ -124,25 +126,66 @@ impl ProbeKind {
             }
         }
     }
-
 }
 
 /// The probe set. Deliberately small and high-signal — no wordlist, no bruteforce.
 const PROBES: &[Probe] = &[
-    Probe { path: "/phpinfo.php", kind: ProbeKind::PhpInfo },
-    Probe { path: "/info.php", kind: ProbeKind::PhpInfo },
-    Probe { path: "/php_info.php", kind: ProbeKind::PhpInfo },
-    Probe { path: "/i.php", kind: ProbeKind::PhpInfo },
-    Probe { path: "/pi.php", kind: ProbeKind::PhpInfo },
-    Probe { path: "/.env", kind: ProbeKind::EnvFile },
-    Probe { path: "/.env.production", kind: ProbeKind::EnvFile },
-    Probe { path: "/server-status", kind: ProbeKind::ServerStatus },
-    Probe { path: "/server-info", kind: ProbeKind::ServerStatus },
-    Probe { path: "/.git/config", kind: ProbeKind::Git },
-    Probe { path: "/.git/HEAD", kind: ProbeKind::Git },
-    Probe { path: "/backup.zip", kind: ProbeKind::Backup },
-    Probe { path: "/backup.sql", kind: ProbeKind::Backup },
-    Probe { path: "/site.tar.gz", kind: ProbeKind::Backup },
+    Probe {
+        path: "/phpinfo.php",
+        kind: ProbeKind::PhpInfo,
+    },
+    Probe {
+        path: "/info.php",
+        kind: ProbeKind::PhpInfo,
+    },
+    Probe {
+        path: "/php_info.php",
+        kind: ProbeKind::PhpInfo,
+    },
+    Probe {
+        path: "/i.php",
+        kind: ProbeKind::PhpInfo,
+    },
+    Probe {
+        path: "/pi.php",
+        kind: ProbeKind::PhpInfo,
+    },
+    Probe {
+        path: "/.env",
+        kind: ProbeKind::EnvFile,
+    },
+    Probe {
+        path: "/.env.production",
+        kind: ProbeKind::EnvFile,
+    },
+    Probe {
+        path: "/server-status",
+        kind: ProbeKind::ServerStatus,
+    },
+    Probe {
+        path: "/server-info",
+        kind: ProbeKind::ServerStatus,
+    },
+    Probe {
+        path: "/.git/config",
+        kind: ProbeKind::Git,
+    },
+    Probe {
+        path: "/.git/HEAD",
+        kind: ProbeKind::Git,
+    },
+    Probe {
+        path: "/backup.zip",
+        kind: ProbeKind::Backup,
+    },
+    Probe {
+        path: "/backup.sql",
+        kind: ProbeKind::Backup,
+    },
+    Probe {
+        path: "/site.tar.gz",
+        kind: ProbeKind::Backup,
+    },
 ];
 
 /// Knobs a phpinfo page discloses that materially raise the risk. Extracted for
@@ -550,7 +593,10 @@ mod tests {
     #[test]
     fn test_extract_value_after_reads_phpinfo_cell() {
         let page = "<td class=\"e\">file_uploads</td><td class=\"v\">On</td>";
-        assert_eq!(extract_value_after(page, "file_uploads"), Some("On".to_string()));
+        assert_eq!(
+            extract_value_after(page, "file_uploads"),
+            Some("On".to_string())
+        );
     }
 
     #[test]
@@ -565,7 +611,10 @@ mod tests {
     #[test]
     fn test_probe_set_is_small_and_high_signal() {
         // No bruteforce: the set is fixed and tiny on purpose.
-        assert!(PROBES.len() <= 16, "wordlist explosion: le module doit rester ciblé");
+        assert!(
+            PROBES.len() <= 16,
+            "wordlist explosion: le module doit rester ciblé"
+        );
         assert!(PROBES.iter().any(|p| p.path == "/phpinfo.php"));
         assert!(PROBES.iter().any(|p| p.path == "/.env"));
     }

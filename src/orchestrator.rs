@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 
 use crate::config::Config;
 use crate::modules::brand_sec::BrandSecAuditor;
+use crate::modules::diag_exposure::DiagExposureAuditor;
 use crate::modules::dns::DnsAuditor;
 use crate::modules::dns_hardening::DnsHardeningAuditor;
 use crate::modules::dnsrecon_audit::DnsreconAuditor;
@@ -29,7 +30,6 @@ use crate::modules::tech_stack::TechStackAuditor;
 use crate::modules::theharvester_audit::TheHarvesterAuditor;
 use crate::modules::tls::TlsAuditor;
 use crate::modules::vuln_audit::VulnAuditor;
-use crate::modules::diag_exposure::DiagExposureAuditor;
 use crate::modules::waf::WafAuditor;
 use crate::modules::web_endpoints::WebEndpointsAuditor;
 use crate::modules::whois_audit::WhoisAuditor;
@@ -313,13 +313,9 @@ impl AuditOrchestrator {
         let handle_diag = thread::spawn(move || {
             let t0 = Instant::now();
             tracker_diag.set_running(0, "Recherche de pages de diagnostic exposees...");
-            run_guarded(
-                t0,
-                &tracker_diag,
-                0,
-                "Pages de diagnostic",
-                move || DiagExposureAuditor::audit(&t_diag, &diag_ports),
-            )
+            run_guarded(t0, &tracker_diag, 0, "Pages de diagnostic", move || {
+                DiagExposureAuditor::audit(&t_diag, &diag_ports)
+            })
         });
 
         // 3. Spawning des modules Kali en arrière-plan

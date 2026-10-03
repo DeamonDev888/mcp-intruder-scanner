@@ -1,4 +1,5 @@
 use crate::modules::brand_sec::BrandSecResult;
+use crate::modules::diag_exposure::DiagExposureResult;
 use crate::modules::dns::DnsAuditResult;
 use crate::modules::dns_hardening::DnsHardeningResult;
 use crate::modules::dnsrecon_audit::DnsreconResult;
@@ -20,7 +21,6 @@ use crate::modules::tech_stack::TechStackResult;
 use crate::modules::theharvester_audit::TheHarvesterResult;
 use crate::modules::tls::TlsAuditResult;
 use crate::modules::vuln_audit::VulnAuditResult;
-use crate::modules::diag_exposure::DiagExposureResult;
 use crate::modules::waf::WafResult;
 use crate::modules::web_endpoints::WebEndpointsResult;
 use crate::modules::whois_audit::WhoisResult;
@@ -1008,18 +1008,30 @@ impl FullAuditReport {
     pub fn print_diag_exposure_section(&self) {
         let d = &self.diag_exposure;
         let exposed: Vec<_> = d.pages.iter().filter(|p| p.exposed).collect();
-        let protected: Vec<_> = d.pages.iter().filter(|p| p.signature == "protected").collect();
+        let protected: Vec<_> = d
+            .pages
+            .iter()
+            .filter(|p| p.signature == "protected")
+            .collect();
 
         if exposed.is_empty() && protected.is_empty() {
-            println!("  [DIAG] {} chemin(s) teste(s) : aucune page de diagnostic exposee", d.checked);
+            println!(
+                "  [DIAG] {} chemin(s) teste(s) : aucune page de diagnostic exposee",
+                d.checked
+            );
             return;
         }
 
         if !exposed.is_empty() {
-            println!("  [DIAG] [1;31m{} page(s) de diagnostic EXPOSEE(S) en clair[0m", exposed.len());
+            println!(
+                "  [DIAG] [1;31m{} page(s) de diagnostic EXPOSEE(S) en clair[0m",
+                exposed.len()
+            );
             for p in &exposed {
-                println!("      [31mHTTP {} {} ({} octets, signature {})[0m",
-                         p.status, p.path, p.size, p.signature);
+                println!(
+                    "      [31mHTTP {} {} ({} octets, signature {})[0m",
+                    p.status, p.path, p.size, p.signature
+                );
             }
             if !d.php_disclosures.is_empty() {
                 println!("      Configuration PHP divulguee :");
@@ -1029,7 +1041,10 @@ impl FullAuditReport {
             }
         }
         if !protected.is_empty() {
-            println!("  [DIAG] {} chemin(s) existent mais sont proteges (403/401)", protected.len());
+            println!(
+                "  [DIAG] {} chemin(s) existent mais sont proteges (403/401)",
+                protected.len()
+            );
             for p in &protected {
                 println!("      {} -> HTTP {}", p.path, p.status);
             }

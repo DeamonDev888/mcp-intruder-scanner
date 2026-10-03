@@ -25,10 +25,30 @@ pub mod ui;
 /// Les flags correspondent à la vraie CLI de mcp_intruder (`--help`) :
 /// -1 fast, -2 web, -3 full, -4 infra, -5 vuln, -d discovery.
 pub const PROFILES: &[(&str, &str, &str)] = &[
-    ("fast", "-1", "Modules Rust noyau uniquement — le plus rapide"),
+    (
+        "fast",
+        "-1",
+        "Modules Rust noyau uniquement — le plus rapide",
+    ),
     ("web", "-2", "WAF, WhatWeb, SSLscan, Dnstwist, Httpx"),
-    ("discovery", "-d", "Ffuf, Nikto, détection WAF — recherche de surface"),
-    ("infra", "-4", "Nmap, SSLscan, RustScan — cartographie de ports"),
-    ("vuln", "-5", "Nuclei, Nikto, Nmap, Sqlmap — hunt de vulnérabilités"),
-    ("full", "-3", "Tous les outils Kali — le plus complet, le plus lent"),
+    (
+        "discovery",
+        "-d",
+        "Ffuf, Nikto, détection WAF — recherche de surface",
+    ),
+    (
+        "infra",
+        "-4",
+        "Nmap, SSLscan, RustScan — cartographie de ports",
+    ),
+    (
+        "vuln",
+        "-5",
+        "Nuclei, Nikto, Nmap, Sqlmap — hunt de vulnérabilités",
+    ),
+    (
+        "full",
+        "-3",
+        "Tous les outils Kali — le plus complet, le plus lent",
+    ),
 ];

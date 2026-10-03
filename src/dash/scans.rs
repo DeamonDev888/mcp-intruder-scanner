@@ -119,11 +119,14 @@ fn profile_flags(profile: &str) -> Option<Vec<&'static str>> {
 /// `<`, `\0`… — est refusé.
 fn target_re() -> &'static regex::Regex {
     static RE: OnceLock<regex::Regex> = OnceLock::new();
-    RE.get_or_init(|| regex::Regex::new(r"^[A-Za-z0-9._:/=?~+-]{1,253}$").unwrap_or_else(|_| {
-        // Impossible en pratique (constante littérale) : on évite unwrap() et
-        // on retombe sur une regex qui ne matche RIEN → tout sera refusé.
-        regex::Regex::new(r"^$").unwrap_or_else(|_| regex::Regex::new("$").unwrap_or_else(|_| unreachable!()))
-    }))
+    RE.get_or_init(|| {
+        regex::Regex::new(r"^[A-Za-z0-9._:/=?~+-]{1,253}$").unwrap_or_else(|_| {
+            // Impossible en pratique (constante littérale) : on évite unwrap() et
+            // on retombe sur une regex qui ne matche RIEN → tout sera refusé.
+            regex::Regex::new(r"^$")
+                .unwrap_or_else(|_| regex::Regex::new("$").unwrap_or_else(|_| unreachable!()))
+        })
+    })
 }
 
 /// Valide une cible saisie dans le GUI. Retourne la cible normalisée
@@ -155,8 +158,7 @@ pub fn validate_target(t: &str) -> Result<String, String> {
     // schema est refuse.
     if cleaned.contains("://") {
         return Err(
-            "cible invalide : fournissez un nom de domaine ou une IP nue, pas un URL"
-                .into(),
+            "cible invalide : fournissez un nom de domaine ou une IP nue, pas un URL".into(),
         );
     }
     if !target_re().is_match(&cleaned) {
@@ -422,7 +424,9 @@ fn last_line_of(path: &str) -> String {
 /// « done » (terminé normalement) de « stopped » (tué / crash).
 fn log_looks_complete(path: &str) -> bool {
     let tail = tail_lines(path, 40);
-    tail.iter().rev().any(|l| DONE_MOTIFS.iter().any(|m| l.contains(m)))
+    tail.iter()
+        .rev()
+        .any(|l| DONE_MOTIFS.iter().any(|m| l.contains(m)))
 }
 
 // ---------------------------------------------------------------------------
@@ -432,7 +436,10 @@ fn log_looks_complete(path: &str) -> bool {
 /// Calcule l'état frais de chaque job et renvoie aussi la version mise à jour
 /// du registre (les états terminés sont persistés, sinon ils Notation
 /// « running » au redémarrage suivant).
-fn snapshot_jobs(raw: &Map<String, Value>, reaped: &HashSet<u32>) -> (Vec<LiveScan>, Map<String, Value>) {
+fn snapshot_jobs(
+    raw: &Map<String, Value>,
+    reaped: &HashSet<u32>,
+) -> (Vec<LiveScan>, Map<String, Value>) {
     let mut updated = raw.clone();
     let mut live = Vec::with_capacity(raw.len());
 
@@ -542,7 +549,8 @@ pub fn start(target: &str, profile: &str) -> Result<LiveScan, String> {
         .map(|d| d.as_nanos())
         .unwrap_or(0);
     let tmp_log = format!("{dir}/.mcp-intruder-dash-scan-{stamp}.tmp");
-    let stdout_file = File::create(&tmp_log).map_err(|e| format!("création du log impossible : {e}"))?;
+    let stdout_file =
+        File::create(&tmp_log).map_err(|e| format!("création du log impossible : {e}"))?;
     // stderr en append sur le MÊME fichier : deux descripteurs indépendants
     // qui écrivent au même offset se marcheraient dessus.
     let stderr_file = OpenOptions::new()
@@ -651,7 +659,9 @@ pub fn stop(pid: u32) -> Result<String, String> {
     reap_children();
 
     if term_ok {
-        Ok(format!("scan pid {pid} ({target}) arrêté (SIGTERM puis nettoyage)"))
+        Ok(format!(
+            "scan pid {pid} ({target}) arrêté (SIGTERM puis nettoyage)"
+        ))
     } else {
         Ok(format!(
             "scan pid {pid} ({target}) arrêté (SIGKILL — SIGTERM sans effet)"

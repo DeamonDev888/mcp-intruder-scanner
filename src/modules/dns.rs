@@ -240,32 +240,32 @@ impl DnsAuditor {
         }
     }
 
-/// Lignes `dig +noall +answer` du seul type demande.
-///
-/// `dig +short` ne filtre rien : sur un nom qui porte une chaine CNAME, il
-/// renvoie les CNAME de la chaine pour TOUT type demande. C'est ainsi qu'une
-/// liste de CNAME atterrissait dans mx_records, txt_records, ns_records ET
-/// caa_records (verifie en base sur www.example.org). On exige
-/// donc explicitement le champ TYPE, et la chaine CNAME de resolution est
-/// ecartee : les IP finales sont de toute facon reprises via A/AAAA.
-fn dig_records_of_type(output: &[u8], rtype: &str) -> Vec<String> {
-    let mut out = Vec::new();
-    for line in String::from_utf8_lossy(output).lines() {
-        let cols: Vec<&str> = line.split_whitespace().collect();
-        // format +noall +answer : <nom> <ttl> IN <TYPE> <rdata...>
-        if cols.len() < 5 || !cols[2].eq_ignore_ascii_case("IN") {
-            continue;
+    /// Lignes `dig +noall +answer` du seul type demande.
+    ///
+    /// `dig +short` ne filtre rien : sur un nom qui porte une chaine CNAME, il
+    /// renvoie les CNAME de la chaine pour TOUT type demande. C'est ainsi qu'une
+    /// liste de CNAME atterrissait dans mx_records, txt_records, ns_records ET
+    /// caa_records (verifie en base sur www.example.org). On exige
+    /// donc explicitement le champ TYPE, et la chaine CNAME de resolution est
+    /// ecartee : les IP finales sont de toute facon reprises via A/AAAA.
+    fn dig_records_of_type(output: &[u8], rtype: &str) -> Vec<String> {
+        let mut out = Vec::new();
+        for line in String::from_utf8_lossy(output).lines() {
+            let cols: Vec<&str> = line.split_whitespace().collect();
+            // format +noall +answer : <nom> <ttl> IN <TYPE> <rdata...>
+            if cols.len() < 5 || !cols[2].eq_ignore_ascii_case("IN") {
+                continue;
+            }
+            if !cols[3].eq_ignore_ascii_case(rtype) {
+                continue;
+            }
+            let trimmed = cols[4..].join(" ").trim_matches('"').trim().to_string();
+            if !trimmed.is_empty() {
+                out.push(trimmed);
+            }
         }
-        if !cols[3].eq_ignore_ascii_case(rtype) {
-            continue;
-        }
-        let trimmed = cols[4..].join(" ").trim_matches('"').trim().to_string();
-        if !trimmed.is_empty() {
-            out.push(trimmed);
-        }
+        out
     }
-    out
-}
 
     fn enrich_via_dig(domain: &str, result: &mut DnsAuditResult) {
         // MX natif UDP
@@ -281,13 +281,11 @@ fn dig_records_of_type(output: &[u8], rtype: &str) -> Vec<String> {
             }
         }
         if got_mx_records.is_empty() {
-            if let Some(output) =
-                crate::utils::run_tool(
-                    "dig",
-                    &["+noall", "+answer", "+time=2", "+tries=1", "MX", domain],
-                    8,
-                )
-            {
+            if let Some(output) = crate::utils::run_tool(
+                "dig",
+                &["+noall", "+answer", "+time=2", "+tries=1", "MX", domain],
+                8,
+            ) {
                 got_mx_records = Self::dig_records_of_type(&output.stdout, "MX");
             }
         }
@@ -312,13 +310,11 @@ fn dig_records_of_type(output: &[u8], rtype: &str) -> Vec<String> {
             }
         }
         if got_ns_records.is_empty() {
-            if let Some(output) =
-                crate::utils::run_tool(
-                    "dig",
-                    &["+noall", "+answer", "+time=2", "+tries=1", "NS", domain],
-                    8,
-                )
-            {
+            if let Some(output) = crate::utils::run_tool(
+                "dig",
+                &["+noall", "+answer", "+time=2", "+tries=1", "NS", domain],
+                8,
+            ) {
                 got_ns_records = Self::dig_records_of_type(&output.stdout, "NS");
             }
         }
@@ -343,13 +339,11 @@ fn dig_records_of_type(output: &[u8], rtype: &str) -> Vec<String> {
             }
         }
         if got_txt_records.is_empty() {
-            if let Some(output) =
-                crate::utils::run_tool(
-                    "dig",
-                    &["+noall", "+answer", "+time=2", "+tries=1", "TXT", domain],
-                    8,
-                )
-            {
+            if let Some(output) = crate::utils::run_tool(
+                "dig",
+                &["+noall", "+answer", "+time=2", "+tries=1", "TXT", domain],
+                8,
+            ) {
                 got_txt_records = Self::dig_records_of_type(&output.stdout, "TXT");
             }
         }
@@ -389,13 +383,11 @@ fn dig_records_of_type(output: &[u8], rtype: &str) -> Vec<String> {
             }
         }
         if got_caa_records.is_empty() {
-            if let Some(output) =
-                crate::utils::run_tool(
-                    "dig",
-                    &["+noall", "+answer", "+time=2", "+tries=1", "CAA", domain],
-                    8,
-                )
-            {
+            if let Some(output) = crate::utils::run_tool(
+                "dig",
+                &["+noall", "+answer", "+time=2", "+tries=1", "CAA", domain],
+                8,
+            ) {
                 got_caa_records = Self::dig_records_of_type(&output.stdout, "CAA");
             }
         }

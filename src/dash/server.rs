@@ -5,12 +5,9 @@
 // l'interface (ui::page_shell). Le client polling appelle /api/stream.
 
 use crate::dash::{
-    charts,
-    db,
-    machine,
+    charts, db, machine,
     model::{Kpis, Overview, Series},
-    scans,
-    ui,
+    scans, ui,
 };
 use std::io::{Read, Write};
 use std::net::TcpListener;
@@ -79,8 +76,14 @@ fn empty_overview(db_name: &str, scan: Option<i64>, err: &str) -> Overview {
         dns: Vec::new(),
         tls: Vec::new(),
         loot: Vec::new(),
-        score_series: Series { labels: Vec::new(), values: Vec::new() },
-        findings_series: Series { labels: Vec::new(), values: Vec::new() },
+        score_series: Series {
+            labels: Vec::new(),
+            values: Vec::new(),
+        },
+        findings_series: Series {
+            labels: Vec::new(),
+            values: Vec::new(),
+        },
         port_histogram: Vec::new(),
         live: Vec::new(),
         machine: machine::snapshot(db_name),
@@ -394,16 +397,16 @@ impl Server {
         // l'interface est vide parce qu'il n'y a rien à afficher.
         match db::connect(&self.db_name) {
             Ok(mut c) => {
-                            // fetch_scans renvoie un Vec (vide si la lecture échoue) :
-                            // une base muette ne doit pas empêcher le démarrage.
-                            let s = db::fetch_scans(&mut c, 1);
-                            println!(
-                                "[dashboard] catalogue={} scans={} cible={}",
-                                self.db_name,
-                                s.len(),
-                                s.first().map(|x| x.target.clone()).unwrap_or_default()
-                            );
-                        }
+                // fetch_scans renvoie un Vec (vide si la lecture échoue) :
+                // une base muette ne doit pas empêcher le démarrage.
+                let s = db::fetch_scans(&mut c, 1);
+                println!(
+                    "[dashboard] catalogue={} scans={} cible={}",
+                    self.db_name,
+                    s.len(),
+                    s.first().map(|x| x.target.clone()).unwrap_or_default()
+                );
+            }
             Err(e) => eprintln!("[dashboard] ATTENTION PostgreSQL injoignable : {e}"),
         }
 

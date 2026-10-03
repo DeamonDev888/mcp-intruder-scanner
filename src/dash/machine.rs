@@ -41,7 +41,9 @@ const CMD_TIMEOUT_SECS: u64 = 2;
 /// `stderr` est jeté et `stdin` est fermé pour éviter qu'un service attendant
 /// une entrée ne prolonge l'attente.
 pub fn run_with_timeout(cmd: &mut Command, secs: u64) -> Option<String> {
-    cmd.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null());
+    cmd.stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null());
     let mut child = cmd.spawn().ok()?;
     let mut stdout = child.stdout.take()?;
 
@@ -84,7 +86,9 @@ fn read_trimmed(path: &str) -> Option<String> {
 /// Extrait la valeur d'un couple `clé: valeur` (mémoire, /proc).
 fn proc_field(src: &str, key: &str) -> Option<u64> {
     for line in src.lines() {
-        let Some((k, v)) = line.split_once(':') else { continue };
+        let Some((k, v)) = line.split_once(':') else {
+            continue;
+        };
         if k.trim() != key {
             continue;
         }
@@ -94,8 +98,6 @@ fn proc_field(src: &str, key: &str) -> Option<u64> {
     None
 }
 
-
-
 // ---------------------------------------------------------------------------
 // CPU
 // ---------------------------------------------------------------------------
@@ -103,10 +105,9 @@ fn proc_field(src: &str, key: &str) -> Option<u64> {
 /// (jiffies totals, jiffies inactifs) de la ligne `cpu` agrégée.
 fn cpu_times() -> Option<(u64, u64)> {
     let src = read_trimmed("/proc/stat")?;
-    let line = src.lines().find(|l| {
-        l.starts_with("cpu ")
-            || l.starts_with("cpu\t")
-    })?;
+    let line = src
+        .lines()
+        .find(|l| l.starts_with("cpu ") || l.starts_with("cpu\t"))?;
     // Champs : user nice system idle iowait irq softirq steal …
     let mut vals = [0u64; 8];
     let mut n = 0usize;
@@ -142,9 +143,13 @@ static PREV_CPU: LazyLock<Mutex<Option<(u64, u64)>>> = LazyLock::new(|| Mutex::n
 /// propager le panique.
 pub fn cpu_pct() -> f64 {
     let Some(cur) = cpu_times() else { return 0.0 };
-    let Ok(mut guard) = PREV_CPU.lock() else { return 0.0 };
+    let Ok(mut guard) = PREV_CPU.lock() else {
+        return 0.0;
+    };
     let prev = guard.replace(cur);
-    let Some((p_total, p_idle)) = prev else { return 0.0 };
+    let Some((p_total, p_idle)) = prev else {
+        return 0.0;
+    };
 
     let d_total = cur.0.saturating_sub(p_total);
     let d_idle = cur.1.saturating_sub(p_idle);
@@ -167,9 +172,9 @@ fn cpu_cores() -> usize {
         .map(|rd| {
             rd.filter_map(std::result::Result::ok)
                 .filter(|e| {
-                    e.file_name()
-                        .to_str()
-                        .is_some_and(|n| n.starts_with("cpu") && n[3..].chars().all(char::is_numeric) && n.len() > 3)
+                    e.file_name().to_str().is_some_and(|n| {
+                        n.starts_with("cpu") && n[3..].chars().all(char::is_numeric) && n.len() > 3
+                    })
                 })
                 .count()
         })
@@ -188,11 +193,17 @@ fn meminfo() -> (u64, u64, u64) {
     let total_kb = proc_field(&src, "MemTotal").unwrap_or(0);
     // `Available` et non `Free` : le cache et les buffers sont de la mémoire
     // récupérable, `Free` surestimerait massivement la RAM utilisée.
-    let avail_kb = proc_field(&src, "MemAvailable").or_else(|| proc_field(&src, "MemFree")).unwrap_or(0);
+    let avail_kb = proc_field(&src, "MemAvailable")
+        .or_else(|| proc_field(&src, "MemFree"))
+        .unwrap_or(0);
     let used_kb = total_kb.saturating_sub(avail_kb);
     let swap_total = proc_field(&src, "SwapTotal").unwrap_or(0);
     let swap_free = proc_field(&src, "SwapFree").unwrap_or(0);
-    (kb(total_kb), kb(used_kb), kb(swap_total.saturating_sub(swap_free)))
+    (
+        kb(total_kb),
+        kb(used_kb),
+        kb(swap_total.saturating_sub(swap_free)),
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -213,8 +224,18 @@ fn load_avg() -> Vec<f64> {
 
 fn uptime_s() -> u64 {
     read_trimmed("/proc/uptime")
-        .and_then(|s| s.split_whitespace().next().and_then(|t| t.parse::<f64>().ok()))
-        .map(|f| if f.is_finite() && f > 0.0 { f as u64 } else { 0 })
+        .and_then(|s| {
+            s.split_whitespace()
+                .next()
+                .and_then(|t| t.parse::<f64>().ok())
+        })
+        .map(|f| {
+            if f.is_finite() && f > 0.0 {
+                f as u64
+            } else {
+                0
+            }
+        })
         .unwrap_or(0)
 }
 
@@ -249,16 +270,22 @@ fn os_release() -> String {
 /// les étiqueter « cumul » côté JS. Aucune dépendance externe, on lit /sys.
 fn net_totals_mb() -> (f64, f64) {
     const MB: f64 = 1_048_576.0;
-    let Ok(entries) = fs::read_dir("/sys/class/net") else { return (0.0, 0.0) };
+    let Ok(entries) = fs::read_dir("/sys/class/net") else {
+        return (0.0, 0.0);
+    };
     let (mut rx, mut tx) = (0u64, 0u64);
     for entry in entries.filter_map(std::result::Result::ok) {
-        let Some(name) = entry.file_name().to_str().map(str::to_string) else { continue };
+        let Some(name) = entry.file_name().to_str().map(str::to_string) else {
+            continue;
+        };
         if name == "lo" {
             continue;
         }
         let base = format!("/sys/class/net/{name}/statistics");
         for (field, acc) in [("rx_bytes", &mut rx), ("tx_bytes", &mut tx)] {
-            if let Some(v) = read_trimmed(&format!("{base}/{field}")).and_then(|s| s.parse::<u64>().ok()) {
+            if let Some(v) =
+                read_trimmed(&format!("{base}/{field}")).and_then(|s| s.parse::<u64>().ok())
+            {
                 *acc = acc.saturating_add(v);
             }
         }
@@ -276,7 +303,9 @@ fn net_totals_mb() -> (f64, f64) {
 /// (l'en-tête est ignoré). Aucun shell : `df` est appelé directement.
 fn disk_root() -> (f64, f64, f64) {
     const KB_PER_GB: f64 = 1_048_576.0;
-    let Some(out) = run("df", &["-k", "/"]) else { return (0.0, 0.0, 0.0) };
+    let Some(out) = run("df", &["-k", "/"]) else {
+        return (0.0, 0.0, 0.0);
+    };
 
     let line = out
         .lines()
@@ -284,7 +313,9 @@ fn disk_root() -> (f64, f64, f64) {
         .find(|l| l.split_whitespace().last() == Some("/"))
         .or_else(|| out.lines().rfind(|l| l.split_whitespace().count() >= 5));
 
-    let Some(fields) = line.map(|l| l.split_whitespace().collect::<Vec<_>>()) else { return (0.0, 0.0, 0.0) };
+    let Some(fields) = line.map(|l| l.split_whitespace().collect::<Vec<_>>()) else {
+        return (0.0, 0.0, 0.0);
+    };
     if fields.len() < 5 {
         return (0.0, 0.0, 0.0);
     }
@@ -294,7 +325,11 @@ fn disk_root() -> (f64, f64, f64) {
         Some(p) => p.trim_end_matches('%').parse().unwrap_or(0.0),
         None => 0.0,
     };
-    (pct.clamp(0.0, 100.0), total_kb / KB_PER_GB, avail_kb / KB_PER_GB)
+    (
+        pct.clamp(0.0, 100.0),
+        total_kb / KB_PER_GB,
+        avail_kb / KB_PER_GB,
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -310,9 +345,20 @@ fn disk_root() -> (f64, f64, f64) {
 fn services() -> Vec<ServiceState> {
     let mut args: Vec<&str> = vec!["show"];
     args.extend(TRACKED_SERVICES);
-    args.extend(["--property=Id", "--property=ActiveState", "--property=ActiveEnterTimestamp"]);
+    args.extend([
+        "--property=Id",
+        "--property=ActiveState",
+        "--property=ActiveEnterTimestamp",
+    ]);
     let Some(out) = run("systemctl", &args) else {
-        return TRACKED_SERVICES.iter().map(|n| ServiceState { name: (*n).into(), state: "inconnu".into(), since: "—".into() }).collect();
+        return TRACKED_SERVICES
+            .iter()
+            .map(|n| ServiceState {
+                name: (*n).into(),
+                state: "inconnu".into(),
+                since: "—".into(),
+            })
+            .collect();
     };
 
     let mut blocks: Vec<(String, String, String)> = Vec::new();
@@ -322,14 +368,22 @@ fn services() -> Vec<ServiceState> {
     for line in out.lines() {
         if line.trim().is_empty() {
             if !id.is_empty() {
-                blocks.push((std::mem::take(&mut id), std::mem::take(&mut state), std::mem::take(&mut since)));
+                blocks.push((
+                    std::mem::take(&mut id),
+                    std::mem::take(&mut state),
+                    std::mem::take(&mut since),
+                ));
             }
             continue;
         }
         match line.split_once('=') {
             Some(("Id", v)) => {
                 if !id.is_empty() {
-                    blocks.push((std::mem::take(&mut id), std::mem::take(&mut state), std::mem::take(&mut since)));
+                    blocks.push((
+                        std::mem::take(&mut id),
+                        std::mem::take(&mut state),
+                        std::mem::take(&mut since),
+                    ));
                 }
                 id = v.trim().to_string();
             }
@@ -350,12 +404,27 @@ fn services() -> Vec<ServiceState> {
             let b = blocks
                 .get(i)
                 .filter(|(bid, _, _)| bid.trim_end_matches(".service") == *name)
-                .or_else(|| blocks.iter().find(|(bid, _, _)| bid.trim_end_matches(".service") == *name));
+                .or_else(|| {
+                    blocks
+                        .iter()
+                        .find(|(bid, _, _)| bid.trim_end_matches(".service") == *name)
+                });
             let (state, since) = match b {
-                Some((_, s, t)) if !s.is_empty() => (s.clone(), if t.is_empty() { "—".to_string() } else { t.clone() }),
+                Some((_, s, t)) if !s.is_empty() => (
+                    s.clone(),
+                    if t.is_empty() {
+                        "—".to_string()
+                    } else {
+                        t.clone()
+                    },
+                ),
                 _ => ("inconnu".to_string(), "—".to_string()),
             };
-            ServiceState { name: (*name).into(), state, since }
+            ServiceState {
+                name: (*name).into(),
+                state,
+                since,
+            }
         })
         .collect()
 }
@@ -516,7 +585,10 @@ mod tests {
     fn uptime_human_formats_days_and_hours() {
         assert_eq!(uptime_human(0), "0 h 00 min");
         assert_eq!(uptime_human(3600), "1 h 00 min");
-        assert_eq!(uptime_human(3 * 86_400 + 4 * 3_600 + 22 * 60), "3 j 04 h 22 min");
+        assert_eq!(
+            uptime_human(3 * 86_400 + 4 * 3_600 + 22 * 60),
+            "3 j 04 h 22 min"
+        );
     }
 
     #[test]
@@ -529,7 +601,8 @@ mod tests {
     #[test]
     fn active_scans_ignores_stopped_and_nested() {
         // Deux scans en cours => 2 actifs.
-        let two_running = r#"{"1":{"state":"running","target":"a"},"2":{"state":"running","target":"b"}}"#;
+        let two_running =
+            r#"{"1":{"state":"running","target":"a"},"2":{"state":"running","target":"b"}}"#;
         assert_eq!(count_running_jobs(two_running), 2);
 
         // Un scan arrêté ne compte PAS : c'est tout l'objet du correctif.

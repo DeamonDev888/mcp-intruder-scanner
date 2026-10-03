@@ -315,7 +315,15 @@ fn close() -> &'static str {
 fn empty(w: u32, h: u32, msg: &str) -> String {
     let mut s = open(w, h, msg);
     svg!(s, "<rect x=\"0.5\" y=\"0.5\" width=\"{}\" height=\"{}\" fill=\"{SURFACE}\" stroke=\"{LINE}\" rx=\"3\"/>", cx(fw(w) - 1.0), cx(fw(h) - 1.0));
-    text_at(&mut s, fw(w) / 2.0, fw(h) / 2.0 + 4.0, 11.0, "middle", MUTED, msg);
+    text_at(
+        &mut s,
+        fw(w) / 2.0,
+        fw(h) / 2.0 + 4.0,
+        11.0,
+        "middle",
+        MUTED,
+        msg,
+    );
     svg!(s, "{}", close());
     s
 }
@@ -375,7 +383,11 @@ pub fn area_sparkline(values: &[f64], w: u32, h: u32, tone: &str) -> String {
     let gid = uid("vg");
     let mut s = open_wide(w, h, "tendance");
     svg!(s, "<defs><linearGradient id=\"{gid}\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"{color}\" stop-opacity=\"0.45\"/><stop offset=\"1\" stop-color=\"{color}\" stop-opacity=\"0.02\"/></linearGradient></defs>");
-    svg!(s, "<path d=\"{}\" fill=\"url(#{gid})\"/>", area_path(&pts, base));
+    svg!(
+        s,
+        "<path d=\"{}\" fill=\"url(#{gid})\"/>",
+        area_path(&pts, base)
+    );
     svg!(s, "<path d=\"{}\" fill=\"none\" stroke=\"{color}\" stroke-width=\"1.5\" stroke-linejoin=\"round\" stroke-linecap=\"round\" vector-effect=\"non-scaling-stroke\"/>", line_path(&pts));
     for (i, (x, y)) in pts.iter().enumerate() {
         svg!(s, "<circle cx=\"{}\" cy=\"{}\" r=\"2\" fill=\"{color}\"><title>point {} : {}</title></circle>", cx(*x), cx(*y), i + 1, fmt_val(vals[i]));
@@ -392,10 +404,7 @@ pub fn area_sparkline(values: &[f64], w: u32, h: u32, tone: &str) -> String {
 pub fn donut(buckets: &[Bucket], size: u32) -> String {
     let size = size.max(40);
     let total: f64 = buckets.iter().map(|b| san(b.value).max(0.0)).sum();
-    let visible: Vec<&Bucket> = buckets
-        .iter()
-        .filter(|b| san(b.value) > 0.0)
-        .collect();
+    let visible: Vec<&Bucket> = buckets.iter().filter(|b| san(b.value) > 0.0).collect();
     if visible.is_empty() || total <= 0.0 {
         return empty(size, size, NO_DATA);
     }
@@ -416,8 +425,24 @@ pub fn donut(buckets: &[Bucket], size: u32) -> String {
         acc += len + gap;
     }
     svg!(s, "</g>");
-    text_at(&mut s, cxy, cxy + font * 0.35, font * 2.0, "middle", PAPER, &fmt_val(total));
-    text_at(&mut s, cxy, cxy + font * 1.6, font, "middle", MUTED, "total");
+    text_at(
+        &mut s,
+        cxy,
+        cxy + font * 0.35,
+        font * 2.0,
+        "middle",
+        PAPER,
+        &fmt_val(total),
+    );
+    text_at(
+        &mut s,
+        cxy,
+        cxy + font * 1.6,
+        font,
+        "middle",
+        MUTED,
+        "total",
+    );
     svg!(s, "{}", close());
 
     // Légende sous l'anneau (au plus 7 lignes).
@@ -431,8 +456,21 @@ pub fn donut(buckets: &[Bucket], size: u32) -> String {
     let chars = chars_in(fw(size) - 32.0, font);
     for (i, b) in visible.iter().take(rows).enumerate() {
         let y = fw(size) + 9.0 + fw(i as u32) * lh;
-        svg!(lg, "<rect x=\"2\" y=\"{}\" width=\"8\" height=\"8\" rx=\"1.5\" fill=\"{}\"/>", cx(y - 6.0), tone_color(&b.tone));
-        text_at(&mut lg, 14.0, y + 1.0, font, "start", MUTED, &format!("{} {}", clip_label(&b.label, chars), fmt_val(san(b.value))));
+        svg!(
+            lg,
+            "<rect x=\"2\" y=\"{}\" width=\"8\" height=\"8\" rx=\"1.5\" fill=\"{}\"/>",
+            cx(y - 6.0),
+            tone_color(&b.tone)
+        );
+        text_at(
+            &mut lg,
+            14.0,
+            y + 1.0,
+            font,
+            "start",
+            MUTED,
+            &format!("{} {}", clip_label(&b.label, chars), fmt_val(san(b.value))),
+        );
     }
     svg!(lg, "{}", close());
     lg
@@ -471,10 +509,32 @@ pub fn gauge(value: f64, max: f64, size: u32, label: &str) -> String {
     }
     let (nx, ny) = polar(cxy, cxy, r_needle, a0 + sweep * t);
     svg!(s, "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\" stroke=\"{PAPER}\" stroke-width=\"2\" stroke-linecap=\"round\"/>", cx(cxy), cx(cxy), cx(nx), cx(ny));
-    svg!(s, "<circle cx=\"{}\" cy=\"{}\" r=\"{}\" fill=\"{PAPER}\"/>", cx(cxy), cx(cxy), cx((stroke * 0.6).max(2.0)));
-    text_at(&mut s, cxy, cxy + font * 0.35, font, "middle", PAPER, &fmt_val(value));
+    svg!(
+        s,
+        "<circle cx=\"{}\" cy=\"{}\" r=\"{}\" fill=\"{PAPER}\"/>",
+        cx(cxy),
+        cx(cxy),
+        cx((stroke * 0.6).max(2.0))
+    );
+    text_at(
+        &mut s,
+        cxy,
+        cxy + font * 0.35,
+        font,
+        "middle",
+        PAPER,
+        &fmt_val(value),
+    );
     if !label.is_empty() {
-        text_at(&mut s, cxy, cxy + font * 1.35, lfont, "middle", MUTED, &clip_label(label, chars_in(fw(size) - 6.0, lfont)));
+        text_at(
+            &mut s,
+            cxy,
+            cxy + font * 1.35,
+            lfont,
+            "middle",
+            MUTED,
+            &clip_label(label, chars_in(fw(size) - 6.0, lfont)),
+        );
     }
     svg!(s, "{}", close());
     s
@@ -491,7 +551,9 @@ pub fn hbars(buckets: &[Bucket], w: u32, bar_h: u32, gap: u32) -> String {
         return empty(w, 40, NO_DATA);
     }
     let step = bar_h + gap.max(1);
-    let h = (buckets.len() as u32).saturating_mul(step).saturating_add(2);
+    let h = (buckets.len() as u32)
+        .saturating_mul(step)
+        .saturating_add(2);
     let label_w = (fw(w) * 0.32).clamp(38.0, 130.0);
     let val_w = (fw(w) * 0.16).clamp(30.0, 64.0);
     let x0 = label_w + 6.0;
@@ -508,11 +570,49 @@ pub fn hbars(buckets: &[Bucket], w: u32, bar_h: u32, gap: u32) -> String {
     for (i, b) in buckets.iter().enumerate() {
         let y = 1.0 + fw(i as u32) * fw(step);
         let frac = norm(san(b.value), 0.0, sp);
-        svg!(s, "<g><title>{} : {}</title>", esc(&b.label), fmt_val(b.value));
-        text_at(&mut s, label_w, y + mid, font, "end", MUTED, &clip_label(&b.label, chars));
-        svg!(s, "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" rx=\"{}\" fill=\"{LINE}\"/>", cx(x0), cx(y), cx(track_w), cx(fw(bar_h)), cx(ry.min(6.0)));
-        svg!(s, "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" rx=\"{}\" fill=\"{}\"/>", cx(x0), cx(y), cx((track_w * frac).max(1.0)), cx(fw(bar_h)), cx(ry.min(6.0)), tone_color(&b.tone));
-        text_at(&mut s, x0 + track_w + 5.0, y + mid, font, "start", PAPER, &fmt_val(b.value));
+        svg!(
+            s,
+            "<g><title>{} : {}</title>",
+            esc(&b.label),
+            fmt_val(b.value)
+        );
+        text_at(
+            &mut s,
+            label_w,
+            y + mid,
+            font,
+            "end",
+            MUTED,
+            &clip_label(&b.label, chars),
+        );
+        svg!(
+            s,
+            "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" rx=\"{}\" fill=\"{LINE}\"/>",
+            cx(x0),
+            cx(y),
+            cx(track_w),
+            cx(fw(bar_h)),
+            cx(ry.min(6.0))
+        );
+        svg!(
+            s,
+            "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" rx=\"{}\" fill=\"{}\"/>",
+            cx(x0),
+            cx(y),
+            cx((track_w * frac).max(1.0)),
+            cx(fw(bar_h)),
+            cx(ry.min(6.0)),
+            tone_color(&b.tone)
+        );
+        text_at(
+            &mut s,
+            x0 + track_w + 5.0,
+            y + mid,
+            font,
+            "start",
+            PAPER,
+            &fmt_val(b.value),
+        );
         svg!(s, "</g>");
     }
     svg!(s, "{}", close());
@@ -546,15 +646,41 @@ pub fn stacked_line(series: &Series, w: u32, h: u32, tone: &str) -> String {
     let mut s = open(w, h, "évolution");
     for k in 0..=2_usize {
         let y = pad + plot_h * (fw(k as u32) / 2.0);
-        svg!(s, "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\" stroke=\"{LINE}\" stroke-width=\"1\"/>", cx(pad), cx(y), cx(fw(w) - pad), cx(y));
+        svg!(
+            s,
+            "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\" stroke=\"{LINE}\" stroke-width=\"1\"/>",
+            cx(pad),
+            cx(y),
+            cx(fw(w) - pad),
+            cx(y)
+        );
     }
-    svg!(s, "<path d=\"{}\" fill=\"{color}\" fill-opacity=\"0.16\"/>", area_path(&pts, base));
+    svg!(
+        s,
+        "<path d=\"{}\" fill=\"{color}\" fill-opacity=\"0.16\"/>",
+        area_path(&pts, base)
+    );
     svg!(s, "<path d=\"{}\" fill=\"none\" stroke=\"{color}\" stroke-width=\"1.6\" stroke-linejoin=\"round\" stroke-linecap=\"round\"/>", line_path(&pts));
     for (i, (x, y)) in pts.iter().enumerate() {
         let label = series.labels.get(i).cloned().unwrap_or_default();
-        svg!(s, "<circle cx=\"{}\" cy=\"{}\" r=\"2\" fill=\"{color}\"><title>{} : {}</title></circle>", cx(*x), cx(*y), esc(&label), fmt_val(vals[i]));
+        svg!(
+            s,
+            "<circle cx=\"{}\" cy=\"{}\" r=\"2\" fill=\"{color}\"><title>{} : {}</title></circle>",
+            cx(*x),
+            cx(*y),
+            esc(&label),
+            fmt_val(vals[i])
+        );
     }
-    text_at(&mut s, 2.0, 9.0, 9.0, "start", MUTED, &format!("min {} · max {}", fmt_val(lo), fmt_val(hi)));
+    text_at(
+        &mut s,
+        2.0,
+        9.0,
+        9.0,
+        "start",
+        MUTED,
+        &format!("min {} · max {}", fmt_val(lo), fmt_val(hi)),
+    );
 
     // Libellés d'abscisse équidistants (6 au plus, le dernier toujours).
     let every = (n / 6).max(1);
@@ -562,7 +688,15 @@ pub fn stacked_line(series: &Series, w: u32, h: u32, tone: &str) -> String {
     for (i, (x, _)) in pts.iter().enumerate() {
         let show = (i % every == 0 || i + 1 == n) && show_labels;
         if let Some(label) = series.labels.get(i).filter(|_| show) {
-            text_at(&mut s, *x, fw(h) - 3.0, 9.0, "middle", MUTED, &clip_label(label, 8));
+            text_at(
+                &mut s,
+                *x,
+                fw(h) - 3.0,
+                9.0,
+                "middle",
+                MUTED,
+                &clip_label(label, 8),
+            );
         }
     }
     svg!(s, "{}", close());
@@ -585,17 +719,30 @@ pub fn radial_radar(axes: &[(String, f64)], max: f64, size: u32) -> String {
     let font = (fw(size) * 0.045).clamp(8.0, 11.0);
     let angle = |i: usize| -90.0 + 360.0 * (i as f64) / (n as f64);
     let poly = |frac: f64| -> String {
-        let pts: Vec<(f64, f64)> = (0..n).map(|i| polar(cxy, cxy, r * frac, angle(i))).collect();
+        let pts: Vec<(f64, f64)> = (0..n)
+            .map(|i| polar(cxy, cxy, r * frac, angle(i)))
+            .collect();
         format!("{} Z", line_path(&pts))
     };
 
     let mut s = open(size, size, "radar");
     for k in 1..=4_usize {
-        svg!(s, "<path d=\"{}\" fill=\"none\" stroke=\"{LINE}\" stroke-width=\"1\"/>", poly(fw(k as u32) / 4.0));
+        svg!(
+            s,
+            "<path d=\"{}\" fill=\"none\" stroke=\"{LINE}\" stroke-width=\"1\"/>",
+            poly(fw(k as u32) / 4.0)
+        );
     }
     for i in 0..n {
         let (x, y) = polar(cxy, cxy, r, angle(i));
-        svg!(s, "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\" stroke=\"{LINE}\" stroke-width=\"1\"/>", cx(cxy), cx(cxy), cx(x), cx(y));
+        svg!(
+            s,
+            "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\" stroke=\"{LINE}\" stroke-width=\"1\"/>",
+            cx(cxy),
+            cx(cxy),
+            cx(x),
+            cx(y)
+        );
     }
     let data: Vec<(f64, f64)> = (0..n)
         .map(|i| polar(cxy, cxy, r * norm(san(axes[i].1), 0.0, scale), angle(i)))
@@ -619,7 +766,15 @@ pub fn radial_radar(axes: &[(String, f64)], max: f64, size: u32) -> String {
         } else {
             font * 0.35
         };
-        text_at(&mut s, lx, ly + dy, font, anchor, MUTED, &clip_label(&axes[i].0, 12));
+        text_at(
+            &mut s,
+            lx,
+            ly + dy,
+            font,
+            anchor,
+            MUTED,
+            &clip_label(&axes[i].0, 12),
+        );
     }
     svg!(s, "{}", close());
     s
@@ -650,11 +805,27 @@ pub fn heatmap(days: &[f64], weeks: u32) -> String {
 
     let mut s = open(w, h, "activité quotidienne");
     for (i, name) in DAYS.iter().enumerate() {
-        text_at(&mut s, left - 3.0, top + fw(i as u32) * cell + cell * 0.78, 8.0, "end", MUTED, name);
+        text_at(
+            &mut s,
+            left - 3.0,
+            top + fw(i as u32) * cell + cell * 0.78,
+            8.0,
+            "end",
+            MUTED,
+            name,
+        );
     }
     for col in 0..cols {
         if col % 4 == 0 {
-            text_at(&mut s, left + fw(col as u32) * cell, 8.0, 8.0, "start", MUTED, &format!("S{}", col + 1));
+            text_at(
+                &mut s,
+                left + fw(col as u32) * cell,
+                8.0,
+                8.0,
+                "start",
+                MUTED,
+                &format!("S{}", col + 1),
+            );
         }
         for (row, day) in DAYS.iter().enumerate().take(rows) {
             let x = left + fw(col as u32) * cell;
@@ -673,15 +844,9 @@ pub fn heatmap(days: &[f64], weeks: u32) -> String {
                     } else {
                         AMBER.to_string()
                     };
-                    (
-                        level,
-                        format!("S{} {} : {}", col + 1, day, fmt_val(*v)),
-                    )
+                    (level, format!("S{} {} : {}", col + 1, day, fmt_val(*v)))
                 }
-                None => (
-                    VOID.to_string(),
-                    format!("S{} {} : {}", col + 1, day, "—"),
-                ),
+                None => (VOID.to_string(), format!("S{} {} : {}", col + 1, day, "—")),
             };
             svg!(s, "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" rx=\"2\" fill=\"{fill}\"><title>{}</title></rect>", cx(x), cx(y), cx(cell - gap), cx(cell - gap), esc(&body));
         }
@@ -718,17 +883,57 @@ pub fn histogram(buckets: &[Bucket], w: u32, h: u32) -> String {
     for k in 0..=2_usize {
         let frac = fw(k as u32) / 2.0;
         let y = top + plot_h - plot_h * frac;
-        svg!(s, "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\" stroke=\"{LINE}\" stroke-width=\"1\"/>", cx(left), cx(y), cx(fw(w) - 4.0), cx(y));
-        text_at(&mut s, left - 4.0, y + 3.0, 8.0, "end", MUTED, &fmt_val(sp * frac));
+        svg!(
+            s,
+            "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\" stroke=\"{LINE}\" stroke-width=\"1\"/>",
+            cx(left),
+            cx(y),
+            cx(fw(w) - 4.0),
+            cx(y)
+        );
+        text_at(
+            &mut s,
+            left - 4.0,
+            y + 3.0,
+            8.0,
+            "end",
+            MUTED,
+            &fmt_val(sp * frac),
+        );
     }
     for (i, b) in buckets.iter().enumerate() {
         let x = left + fw(i as u32) * (bar_w + gap);
-        let frac = if sp > 1e-9 { norm(san(b.value), 0.0, sp) } else { 0.0 };
+        let frac = if sp > 1e-9 {
+            norm(san(b.value), 0.0, sp)
+        } else {
+            0.0
+        };
         let bh = (plot_h * frac).max(1.0);
         let y = top + plot_h - bh;
-        svg!(s, "<g><title>{} : {}</title>", esc(&b.label), fmt_val(b.value));
-        svg!(s, "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" rx=\"1.5\" fill=\"{}\"/>", cx(x), cx(y), cx(bar_w), cx(bh), tone_color(&b.tone));
-        text_at(&mut s, x + bar_w / 2.0, fw(h) - 5.0, font, "middle", MUTED, &clip_label(&b.label, chars));
+        svg!(
+            s,
+            "<g><title>{} : {}</title>",
+            esc(&b.label),
+            fmt_val(b.value)
+        );
+        svg!(
+            s,
+            "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" rx=\"1.5\" fill=\"{}\"/>",
+            cx(x),
+            cx(y),
+            cx(bar_w),
+            cx(bh),
+            tone_color(&b.tone)
+        );
+        text_at(
+            &mut s,
+            x + bar_w / 2.0,
+            fw(h) - 5.0,
+            font,
+            "middle",
+            MUTED,
+            &clip_label(&b.label, chars),
+        );
         svg!(s, "</g>");
     }
     svg!(s, "{}", close());
@@ -760,9 +965,25 @@ pub fn ring_progress(pct: f64, size: u32, tone: &str, label: &str) -> String {
     let mut s = open(size, size, &title);
     svg!(s, "<circle cx=\"{}\" cy=\"{}\" r=\"{}\" fill=\"{SURFACE}\" stroke=\"{LINE_STRONG}\" stroke-width=\"{}\"/>", cx(cxy), cx(cxy), cx(r), cx(stroke));
     svg!(s, "<circle cx=\"{}\" cy=\"{}\" r=\"{}\" fill=\"none\" stroke=\"{color}\" stroke-width=\"{}\" stroke-linecap=\"round\" stroke-dasharray=\"{} {}\" transform=\"rotate(-90 {} {})\"><title>{}</title></circle>", cx(cxy), cx(cxy), cx(r), cx(stroke), cx(circ * frac), cx(circ * (1.0 - frac)), cx(cxy), cx(cxy), esc(&title));
-    text_at(&mut s, cxy, cxy + font * 0.12, font, "middle", PAPER, &format!("{:.0}%", raw.clamp(-999.0, 999.0)));
+    text_at(
+        &mut s,
+        cxy,
+        cxy + font * 0.12,
+        font,
+        "middle",
+        PAPER,
+        &format!("{:.0}%", raw.clamp(-999.0, 999.0)),
+    );
     if !label.is_empty() {
-        text_at(&mut s, cxy, cxy + font * 1.05, lfont, "middle", MUTED, &clip_label(label, chars_in(fw(size) - 6.0, lfont)));
+        text_at(
+            &mut s,
+            cxy,
+            cxy + font * 1.05,
+            lfont,
+            "middle",
+            MUTED,
+            &clip_label(label, chars_in(fw(size) - 6.0, lfont)),
+        );
     }
     svg!(s, "{}", close());
     s

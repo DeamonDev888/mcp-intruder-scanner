@@ -1765,7 +1765,6 @@ fn test_full_portscan_bailout_on_blackhole() {
     );
 }
 
-
 #[test]
 fn test_lock_diag_exposure_detects_public_phpinfo() {
     // Regression 2026-10-02 (cible example.com) : /phpinfo.php etait servi en
@@ -1773,7 +1772,10 @@ fn test_lock_diag_exposure_detects_public_phpinfo() {
     // module existant ne l avait remonte. Ce test verrouille la detection.
     use crate::modules::diag_exposure::{DiagExposure, DiagExposureAuditor, DiagExposureResult};
 
-    let mut r = DiagExposureResult { success: true, ..Default::default() };
+    let mut r = DiagExposureResult {
+        success: true,
+        ..Default::default()
+    };
     r.checked = 14;
     r.pages.push(DiagExposure {
         path: "/phpinfo.php".into(),
@@ -1805,7 +1807,10 @@ fn test_lock_diag_exposure_no_finding_on_soft_404() {
     // c est le piege des 20 faux CRITICAL ffuf sur grocer.example.com.
     use crate::modules::diag_exposure::{DiagExposure, DiagExposureAuditor, DiagExposureResult};
 
-    let mut r = DiagExposureResult { success: true, ..Default::default() };
+    let mut r = DiagExposureResult {
+        success: true,
+        ..Default::default()
+    };
     r.pages.push(DiagExposure {
         path: "/phpinfo.php".into(),
         url: "https://cible.example/phpinfo.php".into(),
@@ -1826,7 +1831,10 @@ fn test_lock_diag_exposure_severity_ladder() {
     use crate::modules::diag_exposure::{DiagExposure, DiagExposureAuditor, DiagExposureResult};
 
     let mk = |path: &str, sig: &str, sev: &str| {
-        let mut r = DiagExposureResult { success: true, ..Default::default() };
+        let mut r = DiagExposureResult {
+            success: true,
+            ..Default::default()
+        };
         r.pages.push(DiagExposure {
             path: path.into(),
             url: format!("https://x{path}"),

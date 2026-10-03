@@ -43,9 +43,13 @@ pub const SLOT_SPARK: &str = "@@SVG_SPARK@@";
 
 /// Ordre canonique des sections : sert au scroll-spy, à la palette de
 /// commandes et à la réinitialisation de la mise en page.
-pub const SECTION_ORDER: [&str; 10] = [
-    "hero", "position", "modules", "machines", "scans", "findings", "impact", "tools", "surface", "live",
-];
+/// Les 5 ONGLETS de l'application. Les sections hero / position / cartographie /
+/// machines / outils ne sont plus des onglets : leur information vit dans la
+/// barre de statut du bas (voir `statusbar()`).
+pub const SECTION_ORDER: [&str; 5] = ["findings", "surface", "scans", "impact", "live"];
+
+/// Libelles des onglets (le JS les lit pour la barre).
+pub const TAB_LABELS: [&str; 5] = ["Constats", "Surface", "Scans", "Impact", "Live"];
 
 /// Les labels sont en mono capitalisé, séparés par un filet.
 pub fn label(text: &str) -> String {
@@ -70,8 +74,16 @@ pub fn tone(tone_name: &str) -> String {
 /// Badge de sévérité : pastille + mot, utilisé partout dans les tableaux.
 pub fn severity_badge(sev: &str) -> String {
     let t = tone(sev);
-    let word = if sev.trim().is_empty() { "inconnu" } else { sev.trim() };
-    format!("<span class=\"sev sev-{}\"><i class=\"dot\" aria-hidden=\"true\"></i>{}</span>", t, esc(word))
+    let word = if sev.trim().is_empty() {
+        "inconnu"
+    } else {
+        sev.trim()
+    };
+    format!(
+        "<span class=\"sev sev-{}\"><i class=\"dot\" aria-hidden=\"true\"></i>{}</span>",
+        t,
+        esc(word)
+    )
 }
 
 /// Échappement HTML (texte et attributs).
@@ -108,7 +120,11 @@ pub fn kpi_tile(key: &str, label_text: &str, value: &str, tip: &str) -> String {
 /// Carte de module : identité, sparkline SVG injecté, compteur, blurb noob.
 pub fn module_card(m: &ModuleStat, spark_svg: &str) -> String {
     let sev = m.severity_max.as_deref().unwrap_or("");
-    let sevtxt = if sev.trim().is_empty() { "aucun" } else { sev.trim() };
+    let sevtxt = if sev.trim().is_empty() {
+        "aucun"
+    } else {
+        sev.trim()
+    };
     let cover = m.coverage.min(2);
     format!(
         "<article class=\"card mod\" data-mod=\"{key}\" data-group=\"{grp}\" draggable=\"true\" \
@@ -247,7 +263,10 @@ pub fn body_skeleton_with_sparks(sparks: &[(&str, &str)]) -> String {
             svg
         ));
     }
-    body_skeleton().replace("<div id=\"prefill\" hidden>", &format!("<div id=\"prefill\" hidden>{}", per))
+    body_skeleton().replace(
+        "<div id=\"prefill\" hidden>",
+        &format!("<div id=\"prefill\" hidden>{}", per),
+    )
 }
 
 /// Document complet : doctype, head, style inline, script inline, body vide.
@@ -266,7 +285,7 @@ pub fn page(title: &str) -> String {
     page_shell(title, "tableau de bord de sécurité", &body_skeleton())
 }
 
-/// Le squelette HTML. Uniquement des placeholders : aucun `format!` avec braces.
+/// Le squelette HTML : uniquement des placeholders, pas de format! a accolades.
 pub const SHELL: &str = r##"<!DOCTYPE html>
 <html lang="fr" data-theme="void" data-font="sans">
 <head>
@@ -278,14 +297,31 @@ pub const SHELL: &str = r##"<!DOCTYPE html>
 <title>@@TITLE@@</title>
 <style>@@CSS@@</style>
 </head>
-<body class="boot">
+<body class="app boot">
 <a class="skip" href="#dash">Aller au contenu principal</a>
 <div class="grain" aria-hidden="true"></div>
 <div class="cursor" aria-hidden="true"><i class="cursor-dot"></i><i class="cursor-ring"></i></div>
 <div class="scrim" id="scrim" hidden></div>
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <div class="boot-skeleton" id="boot" aria-hidden="true"></div>
+<header class="app-head">
+  <div class="app-brand">mcp-intruder<i>.</i></div>
+  <div class="app-title" id="apptitle">tableau de bord</div>
+  <div class="app-actions">
+    <button class="app-btn" id="btn-scan" title="Lancer un scan sur une cible">LANCER UN SCAN</button>
+    <button class="app-btn icon" id="btn-search" title="Recherche globale (/)" aria-label="Recherche">/</button>
+    <button class="app-btn icon" id="btn-cmd" title="Commandes (Ctrl+K)" aria-label="Commandes">&#8984;</button>
+    <button class="app-btn icon" id="btn-noob" title="Mode noob : explications" aria-label="Mode noob">?</button>
+    <button class="app-btn icon" id="btn-refresh" title="Rafraichir" aria-label="Rafraichir">&#8635;</button>
+  </div>
+</header>
+<div class="tabbar" role="tablist" aria-label="Sections du tableau de bord">
+  <div class="tabs" role="presentation"></div>
+  <div class="tabbar-right"><span class="clock" id="clock"></span></div>
+</div>
+<div class="app-view" id="view" tabindex="-1">
 @@BODY@@
+</div>
 <script>@@JS@@</script>
 </body>
 </html>
@@ -293,6 +329,161 @@ pub const SHELL: &str = r##"<!DOCTYPE html>
 // ───────────────────────────────────── design system ────────────────────────
 
 pub const CSS: &str = r##"
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MODE APPLICATION — chrome d'une application, pas d'une page web.
+   Tokens Hermes en priorite, Ermitage en repli.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root{
+  --app-bg:       var(--background, #0d0a07);
+  --app-fg:       var(--foreground, #ece5d8);
+  --app-muted:    var(--muted-foreground, #948d7c);
+  --app-accent:   var(--accent, #d9a24e);
+  --app-border:   var(--border, rgba(236,229,216,.12));
+  --app-card:     var(--card, #16120d);
+  --tabbar-h: 40px;
+  --status-h: 34px;
+}
+
+/* Le corps devient une grille d'application : header / onglets / vue / statut.
+   Aucun defilement global : seule la vue Defile. */
+body.app{
+  height:100dvh; margin:0; padding:0;
+  display:grid;
+  grid-template-rows:auto auto minmax(0,1fr) auto;
+  grid-template-areas:"head" "tabs" "view" "status";
+  overflow:hidden;
+  background:var(--app-bg); color:var(--app-fg);
+  font-family:var(--font-sans, "Switzer", Inter, system-ui, -apple-system, "Segoe UI", sans-serif);
+  font-size:14px; line-height:1.5;
+}
+
+/* — header : une seule ligne, titre + actions — */
+.app-head{
+  grid-area:head;
+  display:flex; align-items:center; gap:.75rem;
+  height:44px; padding:0 1rem;
+  background:var(--app-card);
+  border-bottom:1px solid var(--app-border);
+  min-width:0;
+}
+.app-brand{
+  font-family:var(--font-display, "Zodiak", Georgia, serif);
+  font-size:1.05rem; letter-spacing:-.02em; white-space:nowrap;
+}
+.app-brand i{font-style:normal; color:var(--app-accent);}
+.app-title{
+  font-family:var(--font-mono, "Fragment Mono", ui-monospace, monospace);
+  font-size:.68rem; letter-spacing:.06em; color:var(--app-muted);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  flex:1 1 auto; min-width:0;
+}
+.app-actions{display:flex; align-items:center; gap:.35rem; flex:0 0 auto;}
+.app-btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:.35rem;
+  height:28px; padding:0 .6rem;
+  background:transparent; color:var(--app-muted);
+  border:1px solid var(--app-border); border-radius:6px;
+  font-family:var(--font-mono, monospace); font-size:.68rem; letter-spacing:.04em;
+  cursor:pointer; transition:color .12s, border-color .12s, background .12s;
+  white-space:nowrap;
+}
+.app-btn:hover{color:var(--app-fg); border-color:var(--app-accent);}
+.app-btn:focus-visible{outline:2px solid var(--app-accent); outline-offset:1px;}
+.app-btn.primary{color:#1a1509; background:var(--app-accent); border-color:var(--app-accent);}
+.app-btn.primary:hover{filter:brightness(1.08);}
+.app-btn.icon{width:28px; padding:0;}
+
+/* — barre d'onglets — */
+.tabbar{
+  grid-area:tabs;
+  display:flex; align-items:stretch; justify-content:space-between;
+  height:var(--tabbar-h);
+  background:var(--app-card);
+  border-bottom:1px solid var(--app-border);
+  min-width:0;
+}
+.tabs{display:flex; align-items:stretch; overflow-x:auto; scrollbar-width:none;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{
+  position:relative;
+  display:inline-flex; align-items:center; gap:.4rem;
+  padding:0 .95rem; height:100%;
+  background:transparent; color:var(--app-muted);
+  border:0; border-right:1px solid var(--app-border);
+  font-family:var(--font-mono, monospace); font-size:.74rem; letter-spacing:.03em;
+  cursor:pointer; white-space:nowrap;
+  transition:color .12s, background .12s;
+}
+.tab:hover{color:var(--app-fg); background:color-mix(in srgb, var(--app-fg) 4%, transparent);}
+.tab.on{color:var(--app-fg); background:color-mix(in srgb, var(--app-accent) 10%, transparent);}
+/* le marqueur d'onglet actif : un trait ambre en bas, comme un vrai editor */
+.tab.on::after{
+  content:""; position:absolute; left:0; right:0; bottom:0; height:2px;
+  background:var(--app-accent);
+}
+.tab:focus-visible{outline:2px solid var(--app-accent); outline-offset:-2px;}
+.tab-n{
+  min-width:1.15em; padding:0 .3em;
+  background:color-mix(in srgb, var(--app-fg) 10%, transparent);
+  border-radius:9px; font-size:.66rem; font-weight:400; text-align:center;
+}
+.tab.on .tab-n{background:var(--app-accent); color:#1a1509;}
+.tabbar-right{display:flex; align-items:center; gap:.6rem; padding:0 .75rem; flex:0 0 auto;}
+.clock{font-family:var(--font-mono, monospace); font-size:.68rem; color:var(--app-muted);}
+
+/* — zone de vue : SEULE zone qui Defile — */
+.app-view{
+  grid-area:view;
+  overflow-y:auto; overflow-x:hidden;
+  min-height:0; min-width:0;
+  scroll-behavior:smooth;
+}
+.pane{padding:1.25rem 1.5rem 2rem;}
+.pane[hidden]{display:none;}
+.pane.in{animation:paneIn .22s cubic-bezier(.16,1,.3,1) both;}
+@keyframes paneIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+/* a l'interieur d'un onglet, une grille d'application sobre */
+.pane .dash{display:grid; gap:1.1rem;}
+.pane h2{font-family:var(--font-display, Georgia, serif); font-size:1.15rem; font-weight:400; letter-spacing:-.01em;}
+.pane .sec{border:0; padding:0; margin:0;}
+.pane .sec-b{padding:0;}
+
+/* — barre de statut — */
+.statusbar{
+  grid-area:status;
+  display:flex; align-items:center; gap:.9rem;
+  height:var(--status-h); padding:0 .85rem;
+  background:var(--app-card);
+  border-top:1px solid var(--app-border);
+  font-family:var(--font-mono, monospace); font-size:.68rem;
+  color:var(--app-muted); overflow-x:auto; scrollbar-width:none;
+}
+.statusbar::-webkit-scrollbar{display:none;}
+.sb-group{display:inline-flex; align-items:center; gap:.35rem; white-space:nowrap;}
+.sb-grow{flex:1 1 auto;}
+.sb-k{color:var(--app-muted); opacity:.75; text-transform:uppercase; letter-spacing:.1em; font-size:.62rem;}
+.sb-v{color:var(--app-fg);}
+.sb-gauge{gap:.4rem;}
+.sb-bar{width:44px; height:3px; background:color-mix(in srgb, var(--app-fg) 12%, transparent); border-radius:2px; overflow:hidden;}
+.sb-bar i{display:block; height:100%; background:var(--app-accent); transition:width .3s cubic-bezier(.16,1,.3,1);}
+.sb-bar i.ok{background:#8fae7d;} .sb-bar i.med{background:#c8b48a;}
+.sb-bar i.high{background:var(--app-accent);} .sb-bar i.crit{background:#e0654f;}
+.sb-live{margin-left:auto;}
+
+/* — mode etroit : barre d'onglets defilante, statut reduit — */
+@media (max-width:900px){
+  .statusbar .sb-hide-sm{display:none;}
+  .pane{padding:1rem .9rem 1.5rem;}
+  .app-title{display:none;}
+}
+
+/* Respect strict des preferences systeme : plus aucune animation. */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms !important; transition-duration:.001ms !important;}
+  .app-view{scroll-behavior:auto;}
+}
+
 /* 00 — tokens ------------------------------------------------------------ */
 :root{
   --void:#0d0a07; --surface:#16120d; --surface-2:#1d1811; --surface-3:#241e15;
@@ -1032,6 +1223,9 @@ var ST={
   set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}},
   del:function(k){try{localStorage.removeItem(k);}catch(e){return;}}
 };
+/* Onglet actif : persiste comme le reste des preferences. */
+S.tab=ST.get(K.tab,'findings');
+
 function saveLayout(){ST.set(K.layout,{hidden:S.hidden,folded:S.folded,order:currentOrder()});}
 function savePref(){ST.set(K.pref,{theme:S.theme,font:S.font,noob:S.noob,motion:S.motion,cursor:S.cursor});}
 
@@ -2576,21 +2770,208 @@ function bootSkeleton(){
     '<div class="skl-b" style="min-height:260px">'+bars(6)+'</div></div>'+
     '<p class="tiny dim" style="margin-top:18px;text-align:center">Chargement de /api/overview…</p>';
 }
+/* ─────────────────────────────────────────────────── mode application ── */
+/* Un onglet = un <section> masqué sauf celui qui est actif. On ne démonte
+   jamais le DOM : les onglets déjà visités gardent leur état (tri, filtres,
+   scroll), ce qu'un re-render complet à chaque poll détruirait. */
+function pane(d,key,html){
+  return '<section class="pane" data-pane="'+key+'"'+(S.tab===key?'':' hidden')+'>'+html+'</section>';
+}
+
+/* Barre d'onglets. Rôle tablist ARIA + flèches gauche/droite. */
+function paintTabs(){
+  var host=QS('.tabs');if(!host)return;
+  host.innerHTML=TABS.map(function(t){
+    var n=t.key==='findings'?(d_findings_count()):t.key==='impact'?(d_impact_count()):t.key==='live'?(liveRunning().length||0):0;
+    var badge=n>0?'<b class="tab-n">'+esc(n)+'</b>':'';
+    return '<button class="tab'+(S.tab===t.key?' on':'')+'" role="tab" data-tab="'+t.key+'"'+
+      ' aria-selected="'+(S.tab===t.key)+'" title="'+esc(t.tip||'')+'">'+
+      esc(t.label)+badge+'</button>';
+  }).join('');
+}
+
+function d_findings_count(){return ((S.data&&S.data.findings)||[]).length;}
+function d_impact_count(){return ((S.data&&S.data.impacts)||[]).length;}
+
+/* Compteurs pour la barre d'onglets, sans toucher au DOM des sections. */
+function refreshTabBadges(){
+  var host=QS('.tabs');if(!host)return;
+  QSA('.tab',host).forEach(function(b){
+    var k=b.getAttribute('data-tab'),n=0;
+    if(k==='findings')n=d_findings_count();
+    else if(k==='impact')n=d_impact_count();
+    else if(k==='live')n=liveRunning().length;
+    var old=QS('.tab-n',b);
+    if(n>0){if(!old){old=el('b','tab-n');b.appendChild(old);}old.textContent=n;}
+    else if(old)old.remove();
+  });
+}
+
+/* Bascule d'onglet : masque le pane actif, affiche le nouveau. */
+function setTab(k){
+  if(!TABS.some(function(t){return t.key===k;}))k='findings';
+  S.tab=k;ST.set(K.tab,k);
+  QSA('.pane').forEach(function(p){
+    p.hidden=p.getAttribute('data-pane')!==k;
+  });
+  paintTabs();
+  var p=QS('.pane[data-pane="'+k+'"]');
+  if(p){p.classList.remove('in');R.requestAnimationFrame(function(){p.classList.add('in');});}
+  /* La barre de statut se repeint immediatement : sinon le libelle d'onglet
+     restait sur l'ancien jusqu'au prochain polling (3 s). */
+  if(S.data) paintStatus(S.data);
+  refreshTabBadges();
+}
+
+/* ── barre de statut (bas d'ecran) : hero + position + modules + machine
+   + outils, en lecture seule. C'est ICI que vit l'information que le
+   dashboard affichait en sections pleine page. ───────────────────────────── */
+function statusbar(d){
+  return '<footer class="statusbar" role="contentinfo">'+
+    '<div class="sb-group" data-tip="'+esc(TIPS.target)+'"><span class="sb-k">cible</span>'+
+      '<span class="sb-v">'+esc(d.target||'—')+'</span></div>'+
+    '<div class="sb-group" data-tablabel-wrap><span class="sb-k">onglet</span>'+
+      '<span class="sb-v" data-tablabel>'+esc((TABS.filter(function(t){return t.key===S.tab;})[0]||{}).label||'')+'</span></div>'+
+    '<div class="sb-group" data-tip="'+esc(TIPS.modules)+'"><span class="sb-k">modules</span>'+
+      '<span class="sb-v">'+esc(d.kpis.modules_active)+' / '+esc(d.kpis.modules_total)+'</span></div>'+
+    sbGauge('score',(d.score||0),100,''+esc(d.score||0),d.score>=70?'ok':d.score>=40?'med':'crit')+
+    sbGauge('constats',(d.kpis.findings||0),Math.max(1,(d.kpis.findings||0)),
+      nfmt(d.kpis.findings),d.kpis.crit>0?'crit':d.kpis.high>0?'high':'med')+
+    sbGauge('cpu',(d.machine&&d.machine.cpu_pct)||0,100,
+      Math.round((d.machine&&d.machine.cpu_pct)||0)+' %',cpuTone((d.machine&&d.machine.cpu_pct)||0))+
+    sbGauge('ram',(d.machine&&d.machine.ram_used_mb)||0,(d.machine&&d.machine.ram_total_mb)||1,
+      nfmt(d.machine&&d.machine.ram_used_mb)+' Mo',(d.machine&&(d.machine.ram_used_mb/(d.machine.ram_total_mb||1))>0.85)?'high':'ok')+
+    '<div class="sb-group" data-tip="'+esc(TIPS.machine)+'"><span class="sb-k">hote</span>'+
+      '<span class="sb-v">'+esc((d.machine&&d.machine.host)||'—')+'</span></div>'+
+    '<div class="sb-group" data-tip="'+esc(TIPS.scans)+'"><span class="sb-k">scans</span>'+
+      '<span class="sb-v">'+esc(d.kpis.scans)+'</span></div>'+
+    '<div class="sb-group" data-tip="'+esc(TIPS.tools)+'"><span class="sb-k">outils</span>'+
+      '<span class="sb-v">'+esc(((d.tools||[]).length))+'</span></div>'+
+    '<div class="sb-group sb-grow"></div>'+
+    '<div class="sb-group sb-live" data-tip="'+esc(TIPS.live)+'">'+
+      '<i class="pulse'+(liveRunning().length?' on':'')+'"></i>'+
+      '<span class="sb-v">'+esc(liveRunning().length?liveRunning().length+' actif(s)':'au repos')+'</span></div>'+
+    '</footer>';
+}
+
+function cpuTone(v){return v>=85?'crit':v>=60?'med':'ok';}
+
+/* Petit widget barre + valeur pour la barre de statut. */
+function sbGauge(k,v,max,txt,tone){
+  var pct=max>0?clamp(Math.round(v/max*100),0,100):0;
+  return '<div class="sb-group sb-gauge" data-k="'+esc(k)+'">'+
+    '<span class="sb-k">'+esc(k)+'</span>'+
+    '<span class="sb-bar"><i class="'+tone+'" style="width:'+pct+'%"></i></span>'+
+    '<span class="sb-v">'+txt+'</span></div>';
+}
+
+/* Mise a jour de la barre de statut sans re-rendre les panes. */
+function paintStatus(d){
+  var bar=QS('.statusbar');if(!bar||!d)return;
+  var tmp=el('div');tmp.innerHTML=statusbar(d);
+  var fresh=tmp.firstChild;
+  if(fresh)bar.replaceWith(fresh);
+  resolveTips(bar);rebuildTips();
+}
+
+/* Les 5 onglets, dans l'ordre de la barre. `tip` alimente le tooltip. */
+var TABS=[
+  {key:'findings',label:'Constats',tip:'Les problemes de securite trouves, filtres par gravite.'},
+  {key:'surface', label:'Surface',  tip:'Ports, hotes, DNS, TLS, en-tetes et fichiers recuperes.'},
+  {key:'scans',   label:'Scans',    tip:'L historique des scans et l evolution des scores.'},
+  {key:'impact',  label:'Impact',   tip:'Ce qui est reellement exploitable, pas seulement theorique.'},
+  {key:'live',    label:'Live',     tip:'Les scans en cours et leurs logs.'}
+];
+
+/* ══════════════════════════════ chrome applicatif ══════════════════════════ */
+/* Branchement du header, des onglets et du statut au DOM. */
+function initAppChrome(){
+  /* onglets : delegation d'evenement (les boutons sont re-crees a chaque paint) */
+  D.addEventListener('click',function(e){
+    var t=e.target.closest?e.target.closest('.tab'):null;
+    if(t&&t.hasAttribute('data-tab')){setTab(t.getAttribute('data-tab'));return;}
+  });
+
+  /* boutons du header */
+  var bs=function(id){return D.getElementById(id);};
+  var on=function(id,fn){var n=bs(id); if(n) n.addEventListener('click',fn);};
+  on('btn-search',function(){var s=QS('.search-open'); if(s){s.focus();s.select();}});
+  on('btn-cmd',function(){openPal('');});
+  on('btn-noob',function(){applyNoob(!S.noob); paintNoob(); toast('Mode noob',S.noob?'Explications affichees':'Explications masquees');});
+  on('btn-refresh',function(){load(true);});
+  on('btn-scan',function(){openScan();});
+
+  /* horloge dans la barre d'onglets */
+  var tickClock=function(){
+    var c=bs('clock'); if(!c)return;
+    try{c.textContent=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}catch(e){}
+  };
+  tickClock(); setInterval(tickClock,1000);
+
+  /* raccourcis globaux */
+  D.addEventListener('keydown',function(e){
+    if(e.target&&/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;
+    /* Ctrl+1..5 : aller a l'onglet N */
+    if((e.ctrlKey||e.metaKey)&&e.key>='1'&&e.key<='5'){
+      var i=Number(e.key)-1; if(TABS[i]){e.preventDefault();setTab(TABS[i].key);}
+      return;
+    }
+    /* fleches dans la barre d'onglets : navigation clavier */
+    if((e.key==='ArrowRight'||e.key==='ArrowLeft')&&D.activeElement&&D.activeElement.classList.contains('tab')){
+      e.preventDefault();
+      var idx=TABS.findIndex(function(t){return t.key===S.tab;});
+      idx=e.key==='ArrowRight'?(idx+1)%TABS.length:(idx-1+TABS.length)%TABS.length;
+      setTab(TABS[idx].key);
+      var nb=QS('.tab.on'); if(nb)nb.focus();
+    }
+  });
+
+  /* au premier rendu, applique l'onglet memorise */
+  setTab(S.tab);
+}
+
+function paintNoob(){
+  var n=D.getElementById('btn-noob');
+  if(n)n.classList.toggle('on',!!S.noob);
+}
+
+/* Titre de l'app = cible courante + n° de scan. */
+function paintAppTitle(d){
+  var n=D.getElementById('apptitle'); if(!n||!d)return;
+  n.textContent=(d.target||'—')+'  ·  scan #'+d.current_scan+'  ·  score '+(d.score||0)+'/100';
+}
+
 function render(d){
   var host=QS('.dash');
   if(!host){
     host=el('main','dash');
     host.id='dash';
-    host.setAttribute('data-order','hero,position,modules,machines,scans,findings,impact,tools,surface,live');
-    var pf=D.getElementById('prefill');
-    if(pf)pf.parentNode.insertBefore(host,pf.nextSibling);
-    else D.body.appendChild(host);
+    host.setAttribute('data-mode','app');
+    host.setAttribute('data-order','findings,surface,scans,impact,live');
+    /* En mode application le body est une GRILLE (header / onglets / vue /
+       statut) : un enfant pose a la racine deviendrait un sixieme item et
+       casserait la mise en page. On insere donc dans #view, puis dans le
+       placeholder statique, et seulement en dernier recours sur le body. */
+    var view=D.getElementById('view');
+    if(view){view.appendChild(host);}
+    else{
+      var pf=D.getElementById('prefill');
+      if(pf)pf.parentNode.insertBefore(host,pf.nextSibling);
+      else D.body.appendChild(host);
+    }
   }
   S.data=d;
   S.live=d.live||[];
-  host.innerHTML=
-    secHero(d)+secPosition(d)+secModules(d)+secMachines(d)+secScans(d)+
-    secFindings(d)+secImpact(d)+secTools(d)+secSurface(d)+secLive(d);
+  /* Mode application : UNE seule vue a la fois (l'onglet actif), plus la
+     barre d'onglets et la barre de statut du bas. Plus de defilement continu
+     a travers dix sections. */
+  host.innerHTML='<div class="panes">'+pane(d,'findings',secFindings(d))+
+    pane(d,'surface',secSurface(d))+pane(d,'scans',secScans(d))+
+    pane(d,'impact',secImpact(d))+pane(d,'live',secLive(d))+'</div>'+
+    statusbar(d);
+  paintTabs();
+  paintStatus(d);
+  paintAppTitle(d);
   /* les sparklines propres à chaque module */
   QSA('[data-mod]',host).forEach(function(card){
     if(!card.className||card.className.indexOf('card mod')<0)return;
@@ -2663,7 +3044,7 @@ function load(silent){
   if(S.busy&&silent)return Promise.resolve();
   S.busy=true;
   if(!silent){
-    D.body.className=(D.body.className+' loading').trim();
+    D.body.classList.add('loading');
     bootSkeleton();
   }
   return fetch('/api/overview',{headers:{'Accept':'application/json'},cache:'no-store'})
@@ -2955,27 +3336,53 @@ function openFinding(title){
 }
 
 /* ═══ 27 — démarrage ═════════════════════════════════════════════════ */
+/* Une etape d'initialisation qui echoue ne doit pas tuer l'application :
+   on la signale et on continue. Le probleme est visible (bandeau console)
+   sans empecher le chargement des donnees. */
+function safe(name,fn){
+  try{ return fn(); }
+  catch(e){
+    var msg=(e&&e.message)||String(e);
+    D.body.setAttribute('data-init-error',name+' : '+msg);
+    var box=D.getElementById('toasts');
+    if(box){ var t=el('div','toast bad'); t.textContent='Module « '+name+' » indisponible : '+msg; box.appendChild(t); }
+    return null;
+  }
+}
+
 function start(){
-  loadPref();
-  captureSlots();
-  buildChrome();
-  wire();
-  initTips();
-  initGloss();
-  initSearch();
-  initCursor();
-  initParallax();
-  initScroll();
-  D.body.className='loading';
+  /* La classe `app` porte la grille d'application : on ne l'ecrase JAMAIS,
+     meme pendant le chargement. */
+  D.body.classList.add('app');
+
+  safe('initAppChrome',initAppChrome);
+  safe('loadPref',loadPref);
+  safe('captureSlots',captureSlots);
+  safe('buildChrome',buildChrome);
+  safe('wire',wire);
+  safe('initTips',initTips);
+  safe('initGloss',initGloss);
+  safe('initSearch',initSearch);
+  safe('initCursor',initCursor);
+  safe('initParallax',initParallax);
+  safe('initScroll',initScroll);
+
+  D.body.classList.add('loading');
   bootSkeleton();
+
   load().then(function(){
-    initParallax();
+    safe('initParallax',initParallax);
     var pr=QS('#prefill');
     if(pr&&pr.parentNode)pr.parentNode.removeChild(pr);
-    D.body.className=D.body.className.replace(/\bloading\b/,'').trim();
-    if(!D.body.className)D.body.className='ready';
-    startLive();
+    D.body.classList.remove('loading','boot');
+    D.body.classList.add('ready');
+    safe('startLive',startLive);
+  }).catch(function(e){
+    D.body.classList.remove('loading','boot');
+    var box=D.getElementById('toasts');
+    if(box){ var t=el('div','toast bad'); t.textContent='Chargement impossible : '+(e&&e.message||e); box.appendChild(t); }
   });
+
   W.__mcp-intruder={state:S,load:load,refresh:function(){return load(true);},search:runSearch,
     palette:openPal,layout:toggleSheet,reset:resetLayout,exportJSON:exportJSON};
 }

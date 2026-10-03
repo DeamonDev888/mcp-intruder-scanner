@@ -43,10 +43,7 @@ fn main() {
         port = 8099;
     }
 
-    let srv = Server {
-        db_name: db,
-        port,
-    };
+    let srv = Server { db_name: db, port };
 
     // Le panic hook restaure le curseur et ne pollue pas stdout : ici le
     // serveur est silencieux, tout va dans le journal.
