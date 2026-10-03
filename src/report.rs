@@ -20,6 +20,7 @@ use crate::modules::tech_stack::TechStackResult;
 use crate::modules::theharvester_audit::TheHarvesterResult;
 use crate::modules::tls::TlsAuditResult;
 use crate::modules::vuln_audit::VulnAuditResult;
+use crate::modules::diag_exposure::DiagExposureResult;
 use crate::modules::waf::WafResult;
 use crate::modules::web_endpoints::WebEndpointsResult;
 use crate::modules::whois_audit::WhoisResult;
@@ -40,6 +41,7 @@ pub struct FullAuditReport {
     pub web_endpoints: WebEndpointsResult,
     pub dns_hardening: DnsHardeningResult,
     pub vuln_audit: VulnAuditResult,
+    pub diag_exposure: DiagExposureResult,
     pub nmap: Option<NmapAuditResult>,
     pub nuclei: Option<NucleiAuditResult>,
     pub nikto: Option<NiktoAuditResult>,
@@ -82,6 +84,7 @@ impl FullAuditReport {
         web_endpoints: WebEndpointsResult,
         dns_hardening: DnsHardeningResult,
         vuln_audit: VulnAuditResult,
+        diag_exposure: DiagExposureResult,
         nmap: Option<NmapAuditResult>,
         nuclei: Option<NucleiAuditResult>,
         nikto: Option<NiktoAuditResult>,
@@ -133,6 +136,7 @@ impl FullAuditReport {
             web_endpoints,
             dns_hardening,
             vuln_audit,
+            diag_exposure,
             nmap,
             nuclei,
             nikto,
@@ -194,6 +198,7 @@ impl FullAuditReport {
         self.print_ffuf_section();
         self.print_subdomains_section();
         self.print_vuln_section();
+        self.print_diag_exposure_section();
         self.print_tools_section();
         self.print_findings_section();
     }
@@ -995,5 +1000,40 @@ impl FullAuditReport {
             println!("    • Verdict              : {}", f.summary);
             println!();
         }
+    }
+
+    /// Pages de diagnostic / fichiers sensibles exposes en clair.
+    /// Affiche meme quand rien n'est trouve : l'absence de resultat est une
+    /// information (le module a bien tourne).
+    pub fn print_diag_exposure_section(&self) {
+        let d = &self.diag_exposure;
+        let exposed: Vec<_> = d.pages.iter().filter(|p| p.exposed).collect();
+        let protected: Vec<_> = d.pages.iter().filter(|p| p.signature == "protected").collect();
+
+        if exposed.is_empty() && protected.is_empty() {
+            println!("  [DIAG] {} chemin(s) teste(s) : aucune page de diagnostic exposee", d.checked);
+            return;
+        }
+
+        if !exposed.is_empty() {
+            println!("  [DIAG] [1;31m{} page(s) de diagnostic EXPOSEE(S) en clair[0m", exposed.len());
+            for p in &exposed {
+                println!("      [31mHTTP {} {} ({} octets, signature {})[0m",
+                         p.status, p.path, p.size, p.signature);
+            }
+            if !d.php_disclosures.is_empty() {
+                println!("      Configuration PHP divulguee :");
+                for k in d.php_disclosures.iter().take(10) {
+                    println!("        - {}", k);
+                }
+            }
+        }
+        if !protected.is_empty() {
+            println!("  [DIAG] {} chemin(s) existent mais sont proteges (403/401)", protected.len());
+            for p in &protected {
+                println!("      {} -> HTTP {}", p.path, p.status);
+            }
+        }
+        println!("      ({} chemin(s) teste(s) au total)", d.checked);
     }
 }

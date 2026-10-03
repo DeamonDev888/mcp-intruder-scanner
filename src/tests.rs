@@ -1,5 +1,6 @@
 use crate::config::{Config, ToolFlags};
 use crate::modules::db::{sql_esc, sql_int_array, sql_text_array, DatabaseManager};
+use crate::modules::diag_exposure::DiagExposureResult;
 use crate::modules::dns::DnsAuditResult;
 use crate::modules::dns_hardening::DnsHardeningResult;
 use crate::modules::email_sec::{EmailSecAuditor, EmailSecurityResult};
@@ -819,6 +820,7 @@ fn create_dummy_report(findings: Vec<SecurityFinding>) -> FullAuditReport {
             detected_libraries: vec![],
             findings: vec![],
         },
+        DiagExposureResult::default(),
         None,
         None,
         None,
@@ -1761,4 +1763,90 @@ fn test_full_portscan_bailout_on_blackhole() {
         0,
         "TEST-NET-1 ne devrait avoir aucun port ouvert"
     );
+}
+
+
+#[test]
+fn test_lock_diag_exposure_detects_public_phpinfo() {
+    // Regression 2026-10-02 (cible example.com) : /phpinfo.php etait servi en
+    // clair (131 Ko, file_uploads=On sur un PHP 5.5 hors support) et AUCUN
+    // module existant ne l avait remonte. Ce test verrouille la detection.
+    use crate::modules::diag_exposure::{DiagExposure, DiagExposureAuditor, DiagExposureResult};
+
+    let mut r = DiagExposureResult { success: true, ..Default::default() };
+    r.checked = 14;
+    r.pages.push(DiagExposure {
+        path: "/phpinfo.php".into(),
+        url: "https://www.example.com/phpinfo.php".into(),
+        status: 200,
+        exposed: true,
+        signature: "phpinfo_marker".into(),
+        size: 131_223,
+        soft_404: false,
+    });
+    r.exposed_count = 1;
+
+    let f = DiagExposureAuditor::to_findings(&r);
+    assert!(
+        f.iter().any(|x| x.title.contains("/phpinfo.php")),
+        "le phpinfo expose doit produire un finding"
+    );
+    let phpinfo = f.iter().find(|x| x.title.contains("/phpinfo.php")).unwrap();
+    assert_eq!(
+        phpinfo.severity, "HIGH",
+        "un phpinfo public avec file_uploads=On est au moins HIGH"
+    );
+    assert_eq!(phpinfo.category, "SECRETS");
+}
+
+#[test]
+fn test_lock_diag_exposure_no_finding_on_soft_404() {
+    // Un WAF/CMS qui repond 200 a tout ne doit pas generer de finding :
+    // c est le piege des 20 faux CRITICAL ffuf sur grocer.example.com.
+    use crate::modules::diag_exposure::{DiagExposure, DiagExposureAuditor, DiagExposureResult};
+
+    let mut r = DiagExposureResult { success: true, ..Default::default() };
+    r.pages.push(DiagExposure {
+        path: "/phpinfo.php".into(),
+        url: "https://cible.example/phpinfo.php".into(),
+        status: 200,
+        exposed: false,
+        signature: String::new(),
+        size: 4127,
+        soft_404: true,
+    });
+    assert!(
+        DiagExposureAuditor::to_findings(&r).is_empty(),
+        "une soft-404 ne doit produire aucun finding"
+    );
+}
+
+#[test]
+fn test_lock_diag_exposure_severity_ladder() {
+    use crate::modules::diag_exposure::{DiagExposure, DiagExposureAuditor, DiagExposureResult};
+
+    let mk = |path: &str, sig: &str, sev: &str| {
+        let mut r = DiagExposureResult { success: true, ..Default::default() };
+        r.pages.push(DiagExposure {
+            path: path.into(),
+            url: format!("https://x{path}"),
+            status: 200,
+            exposed: true,
+            signature: sig.into(),
+            size: 100,
+            soft_404: false,
+        });
+        DiagExposureAuditor::to_findings(&r)
+            .into_iter()
+            .find(|x| x.title.contains(path))
+            .map(|x| x.severity)
+            .unwrap_or("")
+            == sev
+    };
+
+    assert!(mk("/.env", "env_keyvalue", "CRITICAL"));
+    assert!(mk("/.git/config", "git_config", "CRITICAL"));
+    assert!(mk("/backup.zip", "archive_backup", "HIGH"));
+    assert!(mk("/phpinfo.php", "phpinfo_marker", "HIGH"));
+    assert!(mk("/server-status", "apache_server_status", "MEDIUM"));
 }

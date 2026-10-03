@@ -29,6 +29,7 @@ use crate::modules::tech_stack::TechStackAuditor;
 use crate::modules::theharvester_audit::TheHarvesterAuditor;
 use crate::modules::tls::TlsAuditor;
 use crate::modules::vuln_audit::VulnAuditor;
+use crate::modules::diag_exposure::DiagExposureAuditor;
 use crate::modules::waf::WafAuditor;
 use crate::modules::web_endpoints::WebEndpointsAuditor;
 use crate::modules::whois_audit::WhoisAuditor;
@@ -301,6 +302,26 @@ impl AuditOrchestrator {
             })
         });
 
+        // Diagnostic pages / fichiers sensibles (.env, .git/config, phpinfo) :
+        // ACTIF PAR DEFAUT. Le manque que example.com a revele — un phpinfo.php
+        // public (131 Ko, file_uploads=On, PHP 5.5 hors support) non remonte
+        // par aucun module existant : absent des wordlists ffuf, et pas de
+        // template nuclei qui matchait sur cette cible. 14 GET non destructifs.
+        let diag_ports = config.custom_ports.clone().unwrap_or_default();
+        let t_diag = target.clone();
+        let tracker_diag = Arc::clone(&tracker);
+        let handle_diag = thread::spawn(move || {
+            let t0 = Instant::now();
+            tracker_diag.set_running(0, "Recherche de pages de diagnostic exposees...");
+            run_guarded(
+                t0,
+                &tracker_diag,
+                0,
+                "Pages de diagnostic",
+                move || DiagExposureAuditor::audit(&t_diag, &diag_ports),
+            )
+        });
+
         // 3. Spawning des modules Kali en arrière-plan
         let ww_ports = config.custom_ports.clone().unwrap_or_default();
         let handle_whatweb = if let Some(idx) = idx_whatweb {
@@ -537,6 +558,7 @@ impl AuditOrchestrator {
         let web_endpoints_result = handle_web.join().unwrap_or_default();
         let http_result = handle_http.join().unwrap_or_default();
         let vuln_result = handle_vuln.join().unwrap_or_default();
+        let diag_exposure_result = handle_diag.join().unwrap_or_default();
         let dns_hardening_result = handle_dns_h.join().unwrap_or_default();
 
         // Module Messagerie (protégé contre les panics, jamais re-exécuté).
@@ -869,6 +891,10 @@ impl AuditOrchestrator {
         if let Some(ref obs) = obscura_result {
             findings.extend(ObscuraAuditor.to_findings(obs));
         }
+        // Diagnostic pages / .env / .git : resultat toujours present, donc pas
+        // de Option — on ne filtre pas, y compris quand le module a echoue
+        // (dans ce cas pages est vide et le module ne produit rien).
+        findings.extend(DiagExposureAuditor::to_findings(&diag_exposure_result));
         if let Some(ref hp) = httpx_result {
             let live = hp.iter().filter(|r| r.status_code.is_some()).count();
             if live > 0 {
@@ -962,6 +988,7 @@ impl AuditOrchestrator {
             web_endpoints_result,
             dns_hardening_result,
             vuln_result,
+            diag_exposure_result,
             nmap_result,
             nuclei_result,
             nikto_result,
