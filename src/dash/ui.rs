@@ -452,14 +452,16 @@ body.app{
 /* — barre de statut — */
 .statusbar{
   grid-area:status;
-  display:flex; align-items:center; gap:.9rem;
-  height:var(--status-h); padding:0 .85rem;
+  display:block; min-height:var(--status-h);
+  padding:0;
   background:var(--app-card);
   border-top:1px solid var(--app-border);
   font-family:var(--font-mono, monospace); font-size:.68rem;
-  color:var(--app-muted); overflow-x:auto; scrollbar-width:none;
+  color:var(--app-muted);
 }
+.sb-items{overflow-x:auto; scrollbar-width:none; padding:0 .85rem;}
 .statusbar::-webkit-scrollbar{display:none;}
+.sb-items{display:flex; align-items:center; gap:.9rem; height:var(--status-h); white-space:nowrap;}
 .sb-group{display:inline-flex; align-items:center; gap:.35rem; white-space:nowrap;}
 .sb-grow{flex:1 1 auto;}
 .sb-k{color:var(--app-muted); opacity:.75; text-transform:uppercase; letter-spacing:.1em; font-size:.62rem;}
@@ -1217,7 +1219,7 @@ function easeOutExpo(t){return t>=1?1:1-R.pow(2,-10*t);}
 /* ═══ 1 — état + stockage ══════════════════════════════════════════════ */
 var S={data:null,live:[],search:'',filt:'',sort:{},hidden:{},folded:{},noob:true,theme:'void',
   font:'sans',motion:REDUCED?0:1,cursor:0,liveOn:true,busy:false,seq:0,lastGood:null};
-var K={layout:'dash.layout.v1',pref:'dash.pref.v1'};
+var K={layout:'dash.layout.v1',pref:'dash.pref.v1',tab:'dash.tab.v1'};
 var ST={
   get:function(k,d){try{var v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},
   set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}},
@@ -2780,7 +2782,15 @@ function pane(d,key,html){
 
 /* Barre d'onglets. Rôle tablist ARIA + flèches gauche/droite. */
 function paintTabs(){
-  var host=QS('.tabs');if(!host)return;
+  var host=QS('.tabs');
+  /* Le libelle du bandeau est ecrit ICI : paintTabs s'execute a chaque
+     changement d'onglet et a chaque rafraichissement, c'est donc le seul
+     point ou l'affichage est garanti coherent avec l'onglet surligne. */
+  if(!host){
+    var lab0=QS('[data-tablabel]');
+    if(lab0)lab0.textContent=(TABS.filter(function(t){return t.key===S.tab;})[0]||{}).label||'';
+    return;
+  }
   host.innerHTML=TABS.map(function(t){
     var n=t.key==='findings'?(d_findings_count()):t.key==='impact'?(d_impact_count()):t.key==='live'?(liveRunning().length||0):0;
     var badge=n>0?'<b class="tab-n">'+esc(n)+'</b>':'';
@@ -2788,6 +2798,8 @@ function paintTabs(){
       ' aria-selected="'+(S.tab===t.key)+'" title="'+esc(t.tip||'')+'">'+
       esc(t.label)+badge+'</button>';
   }).join('');
+  var lab=QS('[data-tablabel]');
+  if(lab)lab.textContent=(TABS.filter(function(t){return t.key===S.tab;})[0]||{}).label||'';
 }
 
 function d_findings_count(){return ((S.data&&S.data.findings)||[]).length;}
@@ -2817,17 +2829,26 @@ function setTab(k){
   paintTabs();
   var p=QS('.pane[data-pane="'+k+'"]');
   if(p){p.classList.remove('in');R.requestAnimationFrame(function(){p.classList.add('in');});}
-  /* La barre de statut se repeint immediatement : sinon le libelle d'onglet
-     restait sur l'ancien jusqu'au prochain polling (3 s). */
+  /* Le libelle d'onglet dans la barre de statut est ecrit ici, localement et
+     immediatement. Compter sur paintStatus introduisait un retard d'un cycle :
+     le bandeau affichait le nom de l'onglet precedent jusqu'au polling suivant. */
+  var lbl=(TABS.filter(function(t){return t.key===k;})[0]||{}).label||'';
+  var node=QS('[data-tablabel]');
+  if(node)node.textContent=lbl;
+  var wrap=QS('[data-tablabel-wrap]');
+  if(wrap)wrap.setAttribute('data-active',k);
   if(S.data) paintStatus(S.data);
+  /* paintStatus reecrit le bandeau : on reapplique le libelle s'il l'a perdu. */
+  var n2=QS('[data-tablabel]');
+  if(n2)n2.textContent=lbl;
   refreshTabBadges();
 }
 
 /* ── barre de statut (bas d'ecran) : hero + position + modules + machine
    + outils, en lecture seule. C'est ICI que vit l'information que le
    dashboard affichait en sections pleine page. ───────────────────────────── */
-function statusbar(d){
-  return '<footer class="statusbar" role="contentinfo">'+
+function statusbarInner(d){
+  return '<div class="sb-items">'+
     '<div class="sb-group" data-tip="'+esc(TIPS.target)+'"><span class="sb-k">cible</span>'+
       '<span class="sb-v">'+esc(d.target||'—')+'</span></div>'+
     '<div class="sb-group" data-tablabel-wrap><span class="sb-k">onglet</span>'+
@@ -2851,7 +2872,7 @@ function statusbar(d){
     '<div class="sb-group sb-live" data-tip="'+esc(TIPS.live)+'">'+
       '<i class="pulse'+(liveRunning().length?' on':'')+'"></i>'+
       '<span class="sb-v">'+esc(liveRunning().length?liveRunning().length+' actif(s)':'au repos')+'</span></div>'+
-    '</footer>';
+    '</div>';
 }
 
 function cpuTone(v){return v>=85?'crit':v>=60?'med':'ok';}
@@ -2866,11 +2887,28 @@ function sbGauge(k,v,max,txt,tone){
 }
 
 /* Mise a jour de la barre de statut sans re-rendre les panes. */
+/* Monte la barre de statut comme enfant DIRECT du body, juste apres la zone
+   de vue. Etre dans .dash la ferait defiler avec le contenu ; etre dans le body
+   lui donne la ligne `status` de la grille d'application. */
+function mountStatusBar(d){
+  var bar=QS('.statusbar');
+  if(!bar){
+    bar=el('footer','statusbar');
+    bar.setAttribute('role','contentinfo');
+    var view=D.getElementById('view');
+    if(view&&view.parentNode) view.parentNode.insertBefore(bar,view.nextSibling);
+    else D.body.appendChild(bar);
+  }
+  bar.innerHTML=statusbarInner(d);
+  resolveTips(bar);rebuildTips();
+}
 function paintStatus(d){
-  var bar=QS('.statusbar');if(!bar||!d)return;
-  var tmp=el('div');tmp.innerHTML=statusbar(d);
-  var fresh=tmp.firstChild;
-  if(fresh)bar.replaceWith(fresh);
+  var bar=QS('.statusbar');
+  if(!bar||!d)return;
+  /* Remplacement du contenu seul : on garde l'element pour ne pas perdre sa
+     place dans la grille (un replaceWith le recreerait au meme endroit, mais
+     resterait fragile si l'ordre du DOM changeait). */
+  bar.innerHTML=statusbarInner(d);
   resolveTips(bar);rebuildTips();
 }
 
@@ -2965,10 +3003,13 @@ function render(d){
   /* Mode application : UNE seule vue a la fois (l'onglet actif), plus la
      barre d'onglets et la barre de statut du bas. Plus de defilement continu
      a travers dix sections. */
+  /* Le host ne porte QUE les vues. La barre de statut est un enfant direct du
+     body (voir mountStatusBar) : c'est ce qui lui donne sa ligne dans la
+     grille au lieu de defiler avec la vue. */
   host.innerHTML='<div class="panes">'+pane(d,'findings',secFindings(d))+
     pane(d,'surface',secSurface(d))+pane(d,'scans',secScans(d))+
-    pane(d,'impact',secImpact(d))+pane(d,'live',secLive(d))+'</div>'+
-    statusbar(d);
+    pane(d,'impact',secImpact(d))+pane(d,'live',secLive(d))+'</div>';
+  mountStatusBar(d);
   paintTabs();
   paintStatus(d);
   paintAppTitle(d);
