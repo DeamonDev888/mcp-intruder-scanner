@@ -546,10 +546,7 @@ fn extract_value_after(text: &str, key: &str) -> Option<String> {
         Some(i) => &tail[i + 8..],
         None => tail,
     };
-    let start = match after_tags.find('>') {
-        Some(i) => i + 1,
-        None => return None,
-    };
+    let start = after_tags.find('>')? + 1;
     let end = after_tags[start..].find('<').map(|i| start + i)?;
     let v = after_tags[start..end].trim();
     if v.is_empty() {
