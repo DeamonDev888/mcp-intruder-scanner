@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/mcp_intruder_banner.png" alt="MCP INTRUDER OFFENSIVE SURFACE SCANNER" width="100%">
+  <img src="assets/banner-mcp-intruder.svg" alt="MCP Intruder — Plan de contrôle MCP universel" width="100%">
 </p>
 
 <p align="center">
@@ -12,7 +12,7 @@
 
 ---
 
-# 🛡️ MCP INTRUDER — Cyber Intelligence & Offensive Surface Engine 360°
+# 🛡️ MCP INTRUDER
 
 > **Moteur modulaire d'audit de sécurité offensif et de cartographie de surface d'attaque.**
 > Conçu pour être exécuté aussi bien par un **opérateur humain** (TUI interactif) que par un **agent IA autonome** en ligne de commande (CLI / JSON natif).

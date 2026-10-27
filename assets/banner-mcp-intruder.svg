@@ -1,0 +1,319 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 800" width="1920" height="800" role="img" aria-label="MCP Intruder - Plan de controle universel - 340 skills, 39 modules de scan, 19 bins d'impact">
+  <defs>
+    <!-- Background Gradients -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#07080e"/>
+      <stop offset="50%" stop-color="#0e1019"/>
+      <stop offset="100%" stop-color="#090c13"/>
+    </linearGradient>
+
+    <radialGradient id="hot" cx="18%" cy="26%" r="48%">
+      <stop offset="0%" stop-color="#ff224e" stop-opacity="0.30"/>
+      <stop offset="55%" stop-color="#ff224e" stop-opacity="0.07"/>
+      <stop offset="100%" stop-color="#ff224e" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="cool" cx="84%" cy="20%" r="45%">
+      <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.14"/>
+      <stop offset="60%" stop-color="#00e5ff" stop-opacity="0.03"/>
+      <stop offset="100%" stop-color="#00e5ff" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="accent-purple" cx="50%" cy="85%" r="50%">
+      <stop offset="0%" stop-color="#7928ca" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#7928ca" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Grid Pattern -->
+    <pattern id="grid" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#1d2030" stroke-width="0.8" opacity="0.6"/>
+      <circle cx="60" cy="0" r="1.2" fill="#ff224e" opacity="0.3"/>
+    </pattern>
+
+    <!-- Glow Filters -->
+    <filter id="glow-red" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="glow-cyan" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="card-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+
+    <style>
+      .sans { font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif; }
+      .mono { font-family: ui-monospace, "JetBrains Mono", "Cascadia Code", "Fira Code", "IBM Plex Mono", Menlo, monospace; }
+      .muted { fill: #9da0b5; }
+      .dim { fill: #5c6075; }
+      .white { fill: #f8f9fc; }
+      .red { fill: #ff224e; }
+      .red-bright { fill: #ff3b65; }
+      .cyan { fill: #00e5ff; }
+      .amber { fill: #ffb703; }
+    </style>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="1920" height="800" fill="url(#bg)"/>
+  <rect width="1920" height="800" fill="url(#grid)"/>
+  <rect width="1920" height="800" fill="url(#hot)"/>
+  <rect width="1920" height="800" fill="url(#cool)"/>
+  <rect width="1920" height="800" fill="url(#accent-purple)"/>
+
+  <!-- Top Decorative Tech Accents -->
+  <g class="mono" opacity="0.55">
+    <path d="M 0 0 L 260 0 L 280 20 L 0 20 Z" fill="#ff224e" opacity="0.15"/>
+    <text x="18" y="14" font-size="9" fill="#ff224e" font-weight="700" letter-spacing="1.5">PLAN DE CONTRÔLE MCP // 359 BUNDLE</text>
+  </g>
+
+  <!-- Meta Header Row -->
+  <g class="mono" font-size="12" letter-spacing="2.2">
+    <circle cx="82" cy="52" r="3.5" fill="#ff224e" filter="url(#glow-red)"/>
+    <text x="96" y="56" class="dim">MCP-INTRUDER <tspan fill="#3a3e52">/</tspan> <tspan class="red-bright">PLAN DE CONTRÔLE UNIVERSEL</tspan> <tspan fill="#3a3e52">/</tspan> DOCKER · LOCAL · VPS · SSH</text>
+    <text x="1840" y="56" text-anchor="end" class="dim">BUNDLE: <tspan class="red-bright">340 SKILLS</tspan> · <tspan class="cyan">39 MODULES SCAN</tspan> · <tspan class="red-bright">19 BINS IMPACT</tspan></text>
+  </g>
+  <line x1="80" y1="76" x2="1840" y2="76" stroke="#1c2030" stroke-width="1.2"/>
+  <line x1="80" y1="76" x2="310" y2="76" stroke="#ff224e" stroke-width="1.8"/>
+
+    <!-- ==================== LOGO MARK : OFFICIAL KALI/BACKTRACK DRAGON & MCP RETICLE ==================== -->
+  <g transform="translate(76 156) scale(1.54)" filter="url(#glow-red)">
+    <!-- Precision Corner Brackets -->
+    <path d="M 8 22 L 8 8 L 22 8" fill="none" stroke="#ff224e" stroke-width="1.8" opacity="0.85"/>
+    <path d="M 78 8 L 92 8 L 92 22" fill="none" stroke="#ff224e" stroke-width="1.8" opacity="0.85"/>
+    <path d="M 8 78 L 8 92 L 22 92" fill="none" stroke="#ff224e" stroke-width="1.8" opacity="0.85"/>
+    <path d="M 92 78 L 92 92 L 78 92" fill="none" stroke="#ff224e" stroke-width="1.8" opacity="0.85"/>
+
+    <!-- Outer Reticle System -->
+    <circle cx="50" cy="50" r="46" fill="none" stroke="#ff224e" stroke-width="2.2" stroke-dasharray="64 8 64 8"/>
+    <circle cx="50" cy="50" r="38" fill="none" stroke="#ff224e" stroke-width="1" opacity="0.45" stroke-dasharray="3 4"/>
+    <circle cx="50" cy="50" r="29" fill="#ff224e" fill-opacity="0.08" stroke="#00e5ff" stroke-width="0.8" opacity="0.55"/>
+
+    <!-- Crosshair Calibration Axis -->
+    <g stroke="#ff224e" stroke-width="2.6" stroke-linecap="round">
+      <line x1="50" y1="0" x2="50" y2="12"/>
+      <line x1="50" y1="88" x2="50" y2="100"/>
+      <line x1="0" y1="50" x2="12" y2="50"/>
+      <line x1="88" y1="50" x2="100" y2="50"/>
+    </g>
+
+    <!-- 45-Degree Telemetry Ticks -->
+    <g stroke="#ff224e" stroke-width="1.3" opacity="0.6" stroke-linecap="round">
+      <line x1="19" y1="19" x2="25" y2="25"/>
+      <line x1="81" y1="19" x2="75" y2="25"/>
+      <line x1="19" y1="81" x2="25" y2="75"/>
+      <line x1="81" y1="81" x2="75" y2="75"/>
+    </g>
+
+    <!-- MCP Protocol Hexagonal Node Core -->
+    <polygon points="50,18 78,34 78,66 50,82 22,66 22,34" fill="#0c070c" stroke="#ff224e" stroke-width="1.8" stroke-linejoin="round"/>
+    
+    <!-- Protocol Bus Lines Radiating Outward -->
+    <g stroke="#00e5ff" stroke-width="1.1" opacity="0.75">
+      <line x1="50" y1="18" x2="50" y2="12"/>
+      <line x1="78" y1="34" x2="88" y2="28"/>
+      <line x1="78" y1="66" x2="88" y2="72"/>
+      <line x1="50" y1="82" x2="50" y2="88"/>
+      <line x1="22" y1="66" x2="12" y2="72"/>
+      <line x1="22" y1="34" x2="12" y2="28"/>
+    </g>
+    <!-- Solder Micro-Nodes -->
+    <circle cx="50" cy="18" r="1.8" fill="#00e5ff"/>
+    <circle cx="78" cy="34" r="1.8" fill="#00e5ff"/>
+    <circle cx="78" cy="66" r="1.8" fill="#00e5ff"/>
+    <circle cx="50" cy="82" r="1.8" fill="#00e5ff"/>
+    <circle cx="22" cy="66" r="1.8" fill="#00e5ff"/>
+    <circle cx="22" cy="34" r="1.8" fill="#00e5ff"/>
+
+    <!-- THE OFFICIAL KALI LINUX / BACKTRACK DRAGON -->
+    <g transform="translate(50, 49) scale(0.145) translate(-202.5, -276.5)">
+      <path d="m69.929 127.71c-29.464.0337-48.949 2.4206-48.949 2.4206s107.73-5.1706 194.03 29.769c2.9338 13.122 11.759 34.976 16.513 45.481-13.602 9.4041-28.94 18.249-31.328 49.612-2.3877 31.362 24.576 58.947 58.013 59.798 31.751 1.6913 53.688 1.9323 80.277 15.718 25.38 14.034 46.192 56.794 48.251 95.252 2.2244-28.534-8.4845-89.895-58.453-108.53 69.826 12.219 75.982 63.973 75.984 63.994 0 0 5.2056-59.754-88.677-73.531-11.899-1.7458-26.947-3.0899-42.168-3.1283-75.246.99487-77.989-86.786-21.288-91.218 23.499-1.9389 51.556 10.738 78.986 23.512-.10182 3.4068.0405 6.4339 2.2787 9.2314 2.2375 2.7966 10.832 5.8474 13.579 7.4233 2.7464 1.5764 11.545 7.1715 16.937 14.189 1.1692-2.1872 10.933-8.5432 10.933-8.5432s-2.3391.0507-7.781-1.9832c-5.4426-2.0339-11.9-8.1876-12.053-8.5432-.15246-.35625-.25501-.91601 1.0169-1.1705.96572-.81305-1.2209-3.4575-2.1873-4.4232-.96572-.96636-7.4247-11.95-7.5769-12.204-.15245-.25447-.20376-.50931-.66105-.81465-1.4244-.45805-7.6799.66106-7.6799.66106s-9.6211-4.7252-12.937-14.913c.0482 1.7844-1.6497 3.734 0 7.8335-5.0162-2.122-9.325-5.7416-12.723-14.685-2.0227 5.0868 0 8.3215 0 8.3215s-11.811-3.3016-13.701-14.195c-2.0742 4.8902 0 7.8316 0 7.8316s-19.258-10.048-51.255-10.194c-21.422-1.965-25.882-39.65-23.897-45.994 0 0-30.899-16.285-91.723-23.479-22.809-2.6982-44.081-3.5238-61.76-3.5036zm71.276 32.521c-9.2697.0699-19.22.41577-29.674 1.1588-55.751 3.9628-112.04 23.477-112.04 23.477s115.18-28.98 211.77-11.971h.002l-2.512-8.1057s-27.374-4.862-67.542-4.5594zm68.293 17.263c-9.75-.0412-40.02 1.1848-85.564 15.436-57.124 17.874-89.522 43.21-89.522 43.21s85.141-47.539 181.24-50.24l-2.7492-8.3176s-1.1564-.0779-3.4064-.0875zm62.559-.13932c26.38 10.723 49.34 24.931 67.165 44.514l.002.002 4.2794-.27998s-24.518-29.746-71.447-44.236zm72.712 57.183 5.2496 3.8672c.65793-1.1408 3.31 6.0651 4.9229 8.0668.0683.3997-2.6812 3.6124-3.6164 3.42-.0787-.41087-4.3494-1.6449-4.3494-1.6449s-4.853-2.932-5.5451-3.8847c-.6926-.9527 3.0007-9.1925 3.3383-9.8244z" fill="#ff224e" stroke="#ff224e" stroke-width="2.5" stroke-linejoin="round"/>
+    </g>
+
+    <!-- Glowing Cyber Eye on the Kali Dragon -->
+    <circle cx="43.5" cy="41" r="1.8" fill="#00e5ff" filter="url(#glow-cyan)"/>
+
+    <!-- MCP-Auto-Jailbreak Lightning Spear Accent (Piercing Downward) -->
+    <path d="M 50 16 L 52 28 L 48 33 L 53 43 L 47 52 L 52 52 L 50 84" fill="none" stroke="#00e5ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="miter" opacity="0.85" filter="url(#glow-cyan)"/>
+
+    <!-- Center Laser Target Reticle Core -->
+    <circle cx="50" cy="50" r="2.2" fill="#00e5ff" filter="url(#glow-cyan)"/>
+  </g>
+
+  <!-- ==================== TITLE LOCKUP ==================== -->
+  <g class="sans" font-weight="900">
+    <text x="285" y="258" font-size="112" letter-spacing="-2.5" class="white" textLength="340" lengthAdjust="spacingAndGlyphs">mcp</text>
+    <text x="640" y="258" font-size="112" font-weight="200" class="dim">/</text>
+    <text x="700" y="258" font-size="112" letter-spacing="-2.5" class="red-bright" filter="url(#glow-red)" textLength="580" lengthAdjust="spacingAndGlyphs">intruder</text>
+  </g>
+  
+  <!-- Sleek Accent Underline with Terminal Notch -->
+  <line x1="702" y1="288" x2="1280" y2="288" stroke="#ff224e" stroke-width="3.5"/>
+  <circle cx="1280" cy="288" r="3.5" fill="#ff224e" filter="url(#glow-red)"/>
+  <line x1="1288" y1="288" x2="1335" y2="288" stroke="#252a3d" stroke-width="2"/>
+
+  <!-- "PLAN DE CONTRÔLE MCP" PILL BADGE -->
+  <g class="mono" transform="translate(1350, 246)">
+    <rect x="0" y="0" width="240" height="34" rx="17" fill="#ff224e" fill-opacity="0.12" stroke="#ff224e" stroke-width="1.4"/>
+    <circle cx="16" cy="17" r="4.5" fill="#ff224e" filter="url(#glow-red)"/>
+    <text x="28" y="22" font-size="11" font-weight="900" class="red-bright" letter-spacing="1.4">PLAN DE CONTRÔLE MCP</text>
+  </g>
+
+  <!-- ==================== FEATURE CHIPS ==================== -->
+  <g class="mono" font-size="12.5" font-weight="700" letter-spacing="1.8">
+    <text x="288" y="328" class="white"><tspan class="red-bright" font-weight="900">§ </tspan>340 SKILLS (139 T1 + 201 PACKS)</text>
+    <text x="680" y="328" class="white"><tspan class="red-bright" font-weight="900">§ </tspan>39 MODULES SCAN + 19 BINS IMPACT</text>
+    <text x="1140" y="328" class="white"><tspan class="cyan" font-weight="900">§ </tspan>CYCLE ASYNC : LANCER / SUIVRE / STOP</text>
+  </g>
+
+  <!-- Subtitle -->
+  <text x="288" y="374" class="mono muted" font-size="17" letter-spacing="0.2">
+    Plan de contrôle universel : cycle de vie asynchrone (lancer / suivre / récupérer / arrêter), 39 modules, 19 bins et 340 skills.
+  </text>
+
+  <!-- ==================== SPEC CARD (TOP RIGHT) ==================== -->
+  <g class="mono" filter="url(#card-shadow)">
+    <!-- Card Frame -->
+    <rect x="1450" y="132" width="390" height="152" rx="8" fill="#090a12" stroke="#ff224e" stroke-width="1.5"/>
+    <rect x="1450" y="132" width="390" height="3" fill="#ff224e"/>
+    
+    <!-- Status Tag -->
+    <circle cx="1478" cy="162" r="5" fill="#ff224e" filter="url(#glow-red)"/>
+    <text x="1494" y="167" font-size="12" font-weight="800" letter-spacing="2.2" class="red-bright">CONTROL PLANE MCP</text>
+    <rect x="1726" y="152" width="94" height="20" rx="3" fill="#ff224e" fill-opacity="0.15" stroke="#ff224e" stroke-width="0.8"/>
+    <text x="1773" y="166" text-anchor="middle" font-size="10" font-weight="800" class="red-bright">ASYNC LIVE</text>
+
+    <line x1="1474" y1="184" x2="1820" y2="184" stroke="#1d2132"/>
+
+    <!-- Key-Value Specs -->
+    <g font-size="11.5" letter-spacing="1.6">
+      <text x="1474" y="208" class="dim">BUNDLE GLOBAL</text>
+      <text x="1820" y="208" text-anchor="end" class="white" font-weight="800">340 Skills • 15 Cmds • 1 CLI</text>
+
+      <text x="1474" y="232" class="dim">MOTEUR OFFENSIF</text>
+      <text x="1820" y="232" text-anchor="end" class="cyan" font-weight="800">39 Modules • 19 Bins Impact</text>
+
+      <text x="1474" y="256" class="dim">CYCLE ASYNC</text>
+      <text x="1820" y="256" text-anchor="end" class="red-bright">Lancer • Suivre • Récup • Stop</text>
+    </g>
+  </g>
+
+  <!-- ==================== 6 CORE CAPABILITIES GRID ==================== -->
+  <g class="mono" transform="translate(80 436)">
+    <!-- Section Title -->
+    <text x="0" y="0" font-size="11.5" letter-spacing="3" font-weight="800" class="dim">PLAN DE CONTRÔLE MCP : 359 OUTILS ADOPTÉS &amp; CYCLE ASYNC</text>
+    <line x1="500" y1="-4" x2="1760" y2="-4" stroke="#1c2030"/>
+    <line x1="1710" y1="-4" x2="1760" y2="-4" stroke="#ff224e" stroke-width="2"/>
+
+    <!-- Grid: 3 columns x 2 rows -->
+    <g font-size="13">
+      <!-- Col 1, Row 1 -->
+      <g transform="translate(0, 36)">
+        <text x="0" y="0" class="red-bright" font-weight="800" font-size="15">&gt;</text>
+        <text x="24" y="0" class="white" font-weight="800" letter-spacing="1.4">39 MODULES DE SCAN KALI</text>
+        <text x="24" y="20" class="muted">RustScan, Nmap Deep, Nuclei, FFuF, WAF bypass &amp; 25 catégories findings</text>
+      </g>
+
+      <!-- Col 2, Row 1 -->
+      <g transform="translate(600, 36)">
+        <text x="0" y="0" class="red-bright" font-weight="800" font-size="15">&gt;</text>
+        <text x="24" y="0" class="white" font-weight="800" letter-spacing="1.4">19 BINS D'IMPACT CRITIQUE</text>
+        <text x="24" y="20" class="muted">exfiltration .env, dumps .git, sondes Redis, MongoDX, ElasticX, Takeover</text>
+      </g>
+
+      <!-- Col 3, Row 1 -->
+      <g transform="translate(1200, 36)">
+        <text x="0" y="0" class="red-bright" font-weight="800" font-size="15">&gt;</text>
+        <text x="24" y="0" class="white" font-weight="800" letter-spacing="1.4">CYCLE DE VIE ASYNCHRONE</text>
+        <text x="24" y="20" class="muted">orchestrateur autonome : lancer, suivre, récupérer &amp; arrêter</text>
+      </g>
+
+      <!-- Col 1, Row 2 -->
+      <g transform="translate(0, 94)">
+        <text x="0" y="0" class="red-bright" font-weight="800" font-size="15">&gt;</text>
+        <text x="24" y="0" class="white" font-weight="800" letter-spacing="1.4">340 SKILLS (139 T1 + 201 PACKS)</text>
+        <text x="24" y="20" class="muted">45 BugHunter + 94 ACS installés, 38 BugHunter + 163 ACS optionnels</text>
+      </g>
+
+      <!-- Col 2, Row 2 -->
+      <g transform="translate(600, 94)">
+        <text x="0" y="0" class="red-bright" font-weight="800" font-size="15">&gt;</text>
+        <text x="24" y="0" class="white" font-weight="800" letter-spacing="1.4">MCP-AUTO-JAILBREAK</text>
+        <text x="24" y="20" class="muted">injection LLM automatisée, évasion de prompt, 4 modes Burp Intruder</text>
+      </g>
+
+      <!-- Col 3, Row 2 -->
+      <g transform="translate(1200, 94)">
+        <text x="0" y="0" class="red-bright" font-weight="800" font-size="15">&gt;</text>
+        <text x="24" y="0" class="white" font-weight="800" letter-spacing="1.4">MAPPINGS ATT&amp;CK, NIST &amp; OWASP</text>
+        <text x="24" y="20" class="muted">ATT&amp;CK Navigator, NIST CSF, OWASP Top 10, ~25 outils MCP exposés</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- ==================== STATS METRICS BAND ==================== -->
+  <g transform="translate(80 588)">
+    <line x1="0" y1="0" x2="1760" y2="0" stroke="#202436"/>
+    <line x1="830" y1="0" x2="930" y2="0" stroke="#ff224e" stroke-width="3"/>
+    
+    <!-- Big Numbers -->
+    <g class="sans" font-weight="900" text-anchor="middle">
+      <text x="146" y="64" font-size="52" class="red-bright" filter="url(#glow-red)">340</text>
+      <text x="440" y="64" font-size="52" class="cyan" filter="url(#glow-cyan)">39</text>
+      <text x="733" y="64" font-size="52" class="red-bright">19</text>
+      <text x="1027" y="64" font-size="52" class="cyan" filter="url(#glow-cyan)">359</text>
+      <text x="1320" y="64" font-size="52" class="red-bright">15</text>
+      <text x="1614" y="64" font-size="52" class="amber">ASYNC</text>
+    </g>
+
+    <!-- Labels -->
+    <g class="mono" font-size="11" font-weight="800" letter-spacing="3" text-anchor="middle">
+      <text x="146" y="98" class="muted">SKILLS (139 T1 + 201 PACKS)</text>
+      <text x="440" y="98" class="muted">MODULES DE SCAN</text>
+      <text x="733" y="98" class="muted">BINS D'IMPACT</text>
+      <text x="1027" y="98" class="muted">BUNDLE ADOPTÉ TOTAL</text>
+      <text x="1320" y="98" class="muted">COMMANDES SLASH</text>
+      <text x="1614" y="98" class="muted">CYCLE DE VIE PILOTÉ</text>
+    </g>
+  </g>
+
+  <!-- ==================== INTERACTIVE TERMINAL HUD ==================== -->
+  <g class="mono" transform="translate(80 696)">
+    <!-- Terminal Background -->
+    <rect x="0" y="0" width="1760" height="78" rx="7" fill="#090a12" stroke="#222638" stroke-width="1.2"/>
+    
+    <!-- Window Control Dots -->
+    <circle cx="26" cy="20" r="4.5" fill="#ff5f56"/>
+    <circle cx="44" cy="20" r="4.5" fill="#ffbd2e"/>
+    <circle cx="62" cy="20" r="4.5" fill="#27c93f"/>
+
+    <!-- Terminal Window Title -->
+    <text x="92" y="24" font-size="11" letter-spacing="1.6" class="dim">
+      kali@mcp-intruder-01 <tspan fill="#3a3e52">··</tspan> control_plane=mcp <tspan fill="#3a3e52">··</tspan> skills=340 <tspan fill="#3a3e52">··</tspan> modules=39 <tspan fill="#3a3e52">··</tspan> bins=19 <tspan fill="#3a3e52">··</tspan> lifecycle=async
+    </text>
+
+    <!-- Window Divider -->
+    <line x1="0" y1="36" x2="1760" y2="36" stroke="#171926"/>
+
+    <!-- Terminal Command Line -->
+    <text x="24" y="60" font-size="13.5" font-weight="800" class="red-bright">&gt;</text>
+    <text x="46" y="60" font-size="13" class="white" font-weight="700">mcp-intruder run --dispatch docker,local,vps,ssh --skills 340 --modules 39 --bins 19 --async</text>
+    <text x="890" y="60" font-size="12" class="dim"># Plan de contrôle universel : 139 skills Tier-1 actifs, 39 modules scan, 19 bins, cycle async OK</text>
+
+    <!-- Terminal Right Status Tag -->
+    <g transform="translate(1736, 60)">
+      <text x="0" y="0" font-size="12" text-anchor="end" class="red-bright" font-weight="800" letter-spacing="1.8">PLAN DE CONTRÔLE ACTIF</text>
+      <circle cx="-205" cy="-4" r="3.5" fill="#ff224e" filter="url(#glow-red)"/>
+    </g>
+  </g>
+</svg>
