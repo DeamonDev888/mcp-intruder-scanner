@@ -51,7 +51,7 @@ Aucun `.output()` n'a de deadline. Touchés : **nmap, nuclei (le -timeout 5 est 
 | C5 | dns_hardening.rs:38 | Faux open resolver : dig imprime toujours `ANSWER SECTION:` même vide | `dig +short` + sortie non vide parsable en IP |
 | C6 | vuln_audit.rs:85 | Regex jQuery trop large → faux CVE HIGH (-12 pts de score) sur n'importe quel texte | Ancrer aux balises script/link + version complète + comparaison semver |
 | C7 | ffuf_audit.rs:56 | `-fs 495` codé en dur (tuné pour UN site) → faux négatifs ailleurs | Supprimer, garder `-ac` (auto-calibration) |
-| C8 | obscura_audit.rs:113 | `evil.example.com`.ends_with(`example.com`) == true → externe considéré interne | `domain == target \|\| domain.ends_with(&format!(".{}", target))` |
+| C8 | obscura_audit.rs:113 | `evil-MCP-Intruder.ca`.ends_with(`MCP-Intruder.ca`) == true → externe considéré interne | `domain == target \|\| domain.ends_with(&format!(".{}", target))` |
 | C9 | web_endpoints.rs:98 | Probe ALPN **sans `-servername`** → faux http2 sur CDN exigeant SNI | Ajouter `-servername domain` |
 | C10 | geo.rs:47 | `asn` rempli avec `netname:` (libellé, pas un AS) | Parser `origin:`/`OriginAS:`, valider `^AS?\d+$` |
 
@@ -84,7 +84,7 @@ Aucun `.output()` n'a de deadline. Touchés : **nmap, nuclei (le -timeout 5 est 
 ---
 
 ## 🟡 MINEURS (sélection — 25 autres dans les audits détaillés)
-- `config.rs:116` — `Config::default()` avec `target: "example.com"` : piège latent si réutilisé → `String::new()`
+- `config.rs:116` — `Config::default()` avec `target: "MCP-Intruder.ca"` : piège latent si réutilisé → `String::new()`
 - `config.rs:189` — `--timeout 0` accepté (scan vide sans warning) → `value_parser!(u64).range(1..=60000)`
 - `config.rs:204` — profils `-1 -3 -5` cumulables en silence → `conflicts_with_all`
 - `config.rs:489` — `which()` teste `is_file()` sans bit exécutable → diagnostic `tools` faux
@@ -123,7 +123,7 @@ json_escape("a\x00\x1bb")                    // JSON valide
 extract_json_str(r#"{"subdomain":"x"}"#, "domain") == None  // pas de faux match
 Set-Cookie: "secure_session=1; HttpOnly"      // Secure=false attendu
 CORS: "Access-Control-Allow-Origin: https://evil.x" // réflexion détectée
-evil.example.com vs example.com                   // externe
+evil-MCP-Intruder.ca vs MCP-Intruder.ca                   // externe
 ```
 
 **Validation post-edit :** `cargo check && cargo clippy -- -D warnings && cargo test` — si un seul échoue, ne pas déployer.

@@ -83,7 +83,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - **Doublon de verdict** : le dispatch DB n'écrivait plus de verdict fantôme `ERREUR_EXECUTION` quand le bin avait déjà persisté le sien (lignes artifacts purgées de la DB).
 
 ### Changed
-- **Purge du code mort** : `src/modules/orchestrator.rs` et `src/modules/report.rs` (doublons périmés du 2026-09-28, non déclarés dans `mod.rs` donc jamais compilés) supprimés — archivés dans `archive locale/dead-code-20260930/`. Les versions actives sont `src/orchestrator.rs` et `src/report.rs`.
+- **Purge du code mort** : `src/modules/orchestrator.rs` et `src/modules/report.rs` (doublons périmés du 2026-09-28, non déclarés dans `mod.rs` donc jamais compilés) supprimés — archivés dans `archive locale (dead-code-20260930)`. Les versions actives sont `src/orchestrator.rs` et `src/report.rs`.
 
 ## [0.5.5] — 2026-09-30
 

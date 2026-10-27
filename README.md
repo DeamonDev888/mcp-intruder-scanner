@@ -105,7 +105,7 @@ mcp_intruder example.com --sqlmap -j | jq '.sqli[] | {url, parameter, dbms}'
 
 ### 4. Persistance PostgreSQL (par défaut)
 
-Chaque scan est **automatiquement persisté** dans une base PostgreSQL locale (`mcp_intruder_audit` par défaut, modifiable via `--db <NAME>`).
+Chaque scan est **automatiquement persisté** dans une base PostgreSQL locale (nom configurable via `--db <NAME>`).
 
 **Schéma : 13 tables relationnelles** (écrites par chaque scan, en une transaction atomique) :
 - `audit_scans` (header + payload JSONB exhaustif)
@@ -118,12 +118,12 @@ Chaque scan est **automatiquement persisté** dans une base PostgreSQL locale (`
 
 ```bash
 # Lister les 10 derniers scans de example.com
-sudo -u postgres psql mcp_intruder_audit -c \
+sudo -u postgres psql "$AUDIT_DB" -c \
   "SELECT id, target, overall_score, open_ports_count, findings_count, created_at
    FROM audit_scans WHERE target='example.com' ORDER BY id DESC LIMIT 10;"
 
 # Lister les raw_output de tous les outils Kali utilisés dans le scan #42
-sudo -u postgres psql mcp_intruder_audit -c \
+sudo -u postgres psql "$AUDIT_DB" -c \
   "SELECT tool_name, status, items_count, LEFT(summary, 80) FROM audit_tool_outputs WHERE scan_id=42;"
 
 # Historique intégré via le binaire :
@@ -135,10 +135,6 @@ mcp_intruder history 5 --target example.com
 ## ⚡ Aperçu du Terminal TUI (Mode Interactif pour Humains)
 
 Pour un utilisateur en direct sur le serveur Kali, `mcp-intruder` propose une console cyberpunk riche avec monitoring des threads en direct, sparkline des durées, ETA dynamique, et banner final adaptatif (💎 EXCELLENT → ☠️ CRITIQUE) :
-
-<p align="center">
-  <img src="assets/mcp-intruder_tui_logo.svg" alt="MCP Intruder TUI Interface" width="920">
-</p>
 
 ---
 
@@ -208,8 +204,8 @@ mcp_intruder tools   # diagnostique les binaires + SecLists + PostgreSQL
 
 | Outil | Module qui l'utilise | Installation manuelle si absente |
 |---|---|---|
-| `pdhttpx` | HTTPx (probe HTTP massif) | Téléchargé par `mcp-intruder-install.sh` ou `curl -sL https://github.com/projectdiscovery/httpx/releases/download/v1.6.9/httpx_1.6.9_linux_amd64.zip \| sudo install -m 0755 /dev/stdin /usr/local/bin/pdhttpx` |
-| `subfinder` | Sous-domaines (auto) | Téléchargé par `mcp-intruder-install.sh` ou binaire pré-compilé depuis GitHub releases |
+| `pdhttpx` | HTTPx (probe HTTP massif) | Téléchargé par le script d'installation ou `curl -sL https://github.com/projectdiscovery/httpx/releases/download/v1.6.9/httpx_1.6.9_linux_amd64.zip \| sudo install -m 0755 /dev/stdin /usr/local/bin/pdhttpx` |
+| `subfinder` | Sous-domaines (auto) | Téléchargé par le script d'installation ou binaire pré-compilé depuis GitHub releases |
 | `rustscan` | Scan 65535 ports | `sudo apt install rustscan` |
 | `sqlmap` | Injection SQL | `sudo apt install sqlmap` |
 
@@ -234,7 +230,7 @@ cargo clippy --all-targets -- -D warnings  # strict : 0 warning obligatoire
 
 ## 🧩 18 modules d'impact intégrés (même crate depuis v0.5.0)
 
-> Depuis la v0.5.0, les modules d'impact font **partie de `mcp_intruder`** (la crate `crate-impact` a été yankée sur crates.io — un seul crate, un seul `cargo install`).
+> Depuis la v0.5.0, les modules d'impact font **partie de `mcp_intruder`** (la crate d'impact historique a été yankée sur crates.io — un seul crate, un seul `cargo install`).
 
 Tous lecture-seule stricte (GET/DNS uniquement). Verdicts persistés dans `audit_impact`.
 
@@ -334,7 +330,7 @@ d'orchestration (`findings`, `progress`, `db`, `impact`, `netdns`, `nethttp`,
 ---
 
 <p align="center">
-  <img src="assets/mcp-intruder_logo.svg" alt="MCP Intruder Logo" width="380">
+  <img src="assets/banner-mcp-intruder.svg" alt="MCP Intruder Logo" width="380">
   <br>
   <sub>Moteur d'audit offensif · 24 modules · 17 modules d'impact · Persistance PostgreSQL · CLI/TUI/JSON</sub>
 </p>
