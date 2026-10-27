@@ -6,7 +6,7 @@
 // ; le binaire `src/bin/mcp_server.rs` se charge des arguments CLI, du bind
 // et de `serve()`.
 //
-// Inventaire des outils exposes :
+// Inventaire des outils exposes (21) :
 // - `ping`               — sonde de vie (ici, dans mod.rs) ;
 // - `scan_target`        — scan complet orchestre (tools_scan.rs) ;
 // - `scan_history`       — historique PostgreSQL (tools_scan.rs) ;
@@ -15,7 +15,15 @@
 //   directement sur une cible (tools_audit.rs) : dns_audit, tls_audit,
 //   http_audit, whois_audit, geo_locate, email_sec_audit, subdomains_audit,
 //   crt_sh_lookup, waf_detect, tech_stack_audit, dnsrecon_audit,
-//   dns_hardening_audit.
+//   dns_hardening_audit ;
+// - 5 outils du plan de controle jobs (jobs.rs) : job_start, job_status,
+//   job_result, job_stop, job_list — registre de jobs asynchrones (threads
+//   `std`, max 8 actifs, historique 100 finis, PAS de persistance : le
+//   processus est la vie des jobs) pour piloter TOUTES les capacites du
+//   moteur, y compris les executions longues : kind=scan (meme chemin que
+//   scan_target), kind=module (un module moteur du catalogue ferme),
+//   kind=bin (binaire d'impact de la liste blanche), kind=diag
+//   (diagnostic environnement).
 //
 // Contraintes de securite heritees du crate :
 // - bind par defaut 127.0.0.1 (le client MCP est local ou via tunnel) ;
@@ -25,6 +33,7 @@
 //   cible injoignable devient un `Err(...)` lisible par le client ;
 // - aucun chemin d'execution ne passe par `sh -c`.
 
+mod jobs;
 mod tools_audit;
 mod tools_catalog;
 mod tools_scan;
@@ -94,6 +103,10 @@ pub fn build_server_with_db(db_name: &str) -> ServerBuilder {
     let builder = tools_scan::register(builder, &db);
     let builder = tools_audit::register(builder);
     let builder = tools_catalog::register(builder);
+    // Plan de controle jobs : soumission/observation/arrêt d'exécutions
+    // longues en arrière-plan (kind=scan, module, bin, diag) — porte le
+    // total du serveur à 21 outils.
+    let builder = jobs::register(builder);
 
     builder
         .on_call(|event| {

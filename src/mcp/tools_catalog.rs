@@ -43,13 +43,7 @@ pub(super) fn register(builder: ServerBuilder) -> ServerBuilder {
              binaire requis par les modules (nmap, rustscan, ffuf, nuclei, nikto, sqlmap, \
              sslscan, dnsrecon, theHarvester, whatweb, httpx, dig, curl, sha256sum) et \
              pg_isready pour PostgreSQL. Aucun scan, aucune requête réseau.",
-            |_args: &Value| {
-                let mut outils = Map::new();
-                for name in DIAG_TOOLS {
-                    outils.insert((*name).to_string(), probe_tool(name));
-                }
-                Ok(Value::Object(outils))
-            },
+            |_args: &Value| Ok(diag_environment()),
         )
         .annotate(
             "tools_diag",
@@ -58,6 +52,18 @@ pub(super) fn register(builder: ServerBuilder) -> ServerBuilder {
                 .read_only(true)
                 .idempotent(true),
         )
+}
+
+/// Exécute le diagnostic complet : présence + version courte de chaque
+/// binaire du catalogue. `pub(super)` pour la réutilisation par le registre
+/// de jobs (`jobs.rs`, job `kind=diag`) — même logique que l'outil
+/// `tools_diag`, un seul point de vérité.
+pub(super) fn diag_environment() -> Value {
+    let mut outils = Map::new();
+    for name in DIAG_TOOLS {
+        outils.insert((*name).to_string(), probe_tool(name));
+    }
+    Value::Object(outils)
 }
 
 /// Sonde UN binaire : présent sur le PATH ? quelle version courte ?

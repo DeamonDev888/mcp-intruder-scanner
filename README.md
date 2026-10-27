@@ -281,7 +281,55 @@ Le binaire `mcp_server` expose le scanner aux agents IA via le protocole **MCP**
 
 - **Transport** : Streamable HTTP — `POST /mcp`, bind par défaut `127.0.0.1:7808`
 - **Santé** : endpoint `GET /health`
-- **16 outils** : `ping`, `scan_target`, `scan_history`, `tools_diag`, `dns_audit`, `tls_audit`, `http_audit`, `whois_audit`, `geo_locate`, `email_sec_audit`, `subdomains_audit`, `crt_sh_lookup`, `waf_detect`, `tech_stack_audit`, `dnsrecon_audit`, `dns_hardening_audit`
+- **21 outils** : `ping`, `scan_target`, `scan_history`, `tools_diag`, `dns_audit`, `tls_audit`, `http_audit`, `whois_audit`, `geo_locate`, `email_sec_audit`, `subdomains_audit`, `crt_sh_lookup`, `waf_detect`, `tech_stack_audit`, `dnsrecon_audit`, `dns_hardening_audit`, `job_start`, `job_status`, `job_result`, `job_stop`, `job_list`
+
+### Pilotage avancé (jobs)
+
+Les exécutions longues (scan complet, module lourd comme `brand_sec`, binaire
+d'impact) ne bloquent plus le client : **le plan de contrôle jobs** soumet le
+travail en arrière-plan dans des threads `std` dédiés et rend un `job_id`
+immédiatement.
+
+| Outil | Lecture-seule | Rôle |
+|-------|---------------|------|
+| `job_start` | non | Soumet un job asynchrone — `kind`: `scan` (scan complet, `profile` fast/web/discovery/infra/vuln/full), `module` (un module moteur du catalogue), `bin` (binaire d'impact de la liste blanche + `args`), `diag` (diagnostic environnement) — et rend `{ job_id, kind, status: "queued" }` |
+| `job_status` | oui | Snapshot d'un job sans attendre : statut (`queued`/`running`/`done`/`error`/`cancelled`), durée, erreur éventuelle |
+| `job_result` | oui | Attend en polling (250 ms, `wait_seconds` 0..60, défaut 0) puis rend le résultat JSON complet si `done` — même forme que `scan_target` pour `kind=scan` |
+| `job_stop` | non | Annule un job : drapeau coopératif immédiat + kill réel du processus pour `kind=bin` (`child_pid`) ; le résultat d'un scan annulé est jeté |
+| `job_list` | oui | Liste les jobs (`active_only: true` = non terminés uniquement) |
+
+**Modèle jobs** : 8 jobs actifs maximum (au-delà → erreur `rate_limited`,
+libérer via `job_stop`), historique plafonné à 100 jobs finis, **aucune
+persistance** — le processus du serveur est la vie des jobs (un redémarrage
+perd les `job_id` : rejouer `job_start`). Annulation coopérative : `scan` et
+`module` ne sont pas interrompus au vol (orchestrateur monolithique), seul
+`kind=bin` subit un kill réel.
+
+Exemple — lancer un scan `vuln` en arrière-plan puis récupérer le résultat :
+
+```json
+{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"job_start","arguments":{"kind":"scan","target":"10.10.10.5","profile":"vuln"}}}
+```
+
+```json
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"job_result","arguments":{"job_id":"job-0-176123456789","wait_seconds":30}}}
+```
+
+`job_start` répond immédiatement `{"job_id":"job-0-176123456789","kind":"scan","status":"queued"}` ;
+`job_result` boucle tant que le job tourne (jusqu'à 60 s par appel — réappeler
+tant que `status` vaut `running`), puis rend le rapport complet (`overall_score`,
+`counts`, `findings`, `recommandations`...).
+
+Pour `kind=module`, le nom du module est le nom de fichier moteur : `nmap_deep`,
+`sslscan_audit`, `sqli_audit`, `ftp_audit`, `smb_audit`, `box_prober`,
+`full_portscan`, `portscan_rustscan`, `theharvester_audit`, `brand_sec`,
+`obscura_audit`, `diag_exposure`, `scheme_detect`, `nikto_deep`, `nuclei_deep`,
+`web_endpoints`, `http_probe`, `ffuf_audit`, `vuln_audit` + les modules Core
+(`dns`, `tls`, `http`, `whois_audit`, `geo`, `email_sec`, `subdomains`,
+`crt_sh`, `waf`, `tech_stack`, `dnsrecon_audit`, `dns_hardening`). Les modules
+d'orchestration (`findings`, `progress`, `db`, `impact`, `netdns`, `nethttp`,
+`ports`, `loot`) sont refusés en job : passer par `kind=scan` (profils
+`vuln`/`full` pour `loot`).
 
 ---
 
