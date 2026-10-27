@@ -617,7 +617,7 @@ impl AuditOrchestrator {
         // et hors liste well-known (1-1024 + web/mail/db classiques) sont des
         // artefacts de l edge qui repond TCP partout. On les retire du rapport
         // (mais on les laisse dans documente le calcul open_ports_count pour
-        // l observabilite du test : le test unitaire impact_filter_regression le verifie).
+        // l observabilite du test : le test unitaire de regression du filtre d impact le verifie).
         if let Some(ref _w) = waf_result {
             if edge_is_waf {
                 const WELL_KNOWN: &[u16] = &[
