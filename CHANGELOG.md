@@ -4,6 +4,41 @@ Toutes les modifications notables de `mcp_intruder` sont documentées ici.
 
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.6.0] — 2026-10-26
+
+### Changed — BREAKING
+- **Le crate devient `mcp_intruder` (MCP Intruder)** : le scanner n'est plus un binaire qui
+  imprime un rapport, c'est un **serveur Model Context Protocol** (transport Streamable HTTP,
+  crate `litemcp` 0.7). Le binaire historique `mcp_intruder` garde la CLI complète (profils,
+  history, tools) ; le nouveau binaire `mcp_server` sert le protocole MCP.
+- Le moteur de scan est promu dans la lib (`config`, `modules`, `orchestrator`, `report`,
+  `target_parser`, `utils`) : CLI et serveur MCP partagent exactement le même code.
+
+### Added
+- **Serveur MCP complet** (`src/bin/mcp_server.rs` + `src/mcp/`) : bind par défaut
+  `127.0.0.1:7808`, route `/mcp`, sonde `/health`, timeout outil 1 800 s, observabilité
+  `on_call` sur stderr. **21 outils** :
+  - directs (16) : `scan_target` (6 profils, miroir fidèle de `Config::parse`),
+    `scan_history`, `tools_diag` + 12 audits lecture-seule synchrones (dns, tls, http,
+    whois, geo, email_sec, subdomains, crt_sh, waf, tech_stack, dnsrecon, dns_hardening) ;
+  - plan de contrôle jobs (5) : `job_start` / `job_status` / `job_result` / `job_stop` /
+    `job_list` — exécution asynchrone des profils longs, d'un catalogue des **39 modules**
+    du moteur (31 exécutables, 8 orchestration-only refusés avec message explicite) et des
+    **18 bins d'impact** (argv pur, kill au deadline). Registre en process : 8 jobs actifs
+    max, historique 100 finis, annulation coopérative.
+- Schémas zod stricts par outil (validation `-32602` par champ), annotations MCP
+  (`read_only`, `open_world`, titres fr), `raw_output` tronqués à 2 000 caractères.
+- 9 tests MCP en mémoire via `ServerCore::dispatch` (initialize, tools/list, outils,
+  schémas invalides) ; suite complète : 149 tests verts, clippy `-D warnings` propre.
+
+### Refactoré
+- `dash/ui.rs` → `ui/{mod,shell,css,js}` · `lib.rs` → `net/secrets/dnsinfo/gkeyx` ·
+  `modules/findings.rs` → `findings/{dns,ports,email,web,tls,misc,tests}` ·
+  `report.rs` → `report/{net,osint,tools,web}` · `dash/db.rs` → `db/{scans,modules,kpis,
+  surface,series}` (aucun changement de comportement, chemins publics préservés).
+- Derniers 3 parseurs JSON manuels migrés vers `serde_json` (dnsrecon_audit, brand_sec,
+  theharvester_audit) — les ports SRV dnsrecon sont désormais lus en nombre.
+
 ## [0.5.8] — 2026-10-01
 
 ### Added
