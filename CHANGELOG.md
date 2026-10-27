@@ -4,6 +4,13 @@ Toutes les modifications notables de `mcp_intruder` sont documentées ici.
 
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.6.2] — 2026-10-26
+
+### Changed
+- README : bannière référencée par URL absolue (raw.githubusercontent) — crates.io ne
+  résout pas les chemins relatifs dans les README ; version 0.6.2 pour rafraîchir la
+  page du registre (titre sans tagline + bannière visible).
+
 ## [0.6.1] — 2026-10-26
 
 ### Changed

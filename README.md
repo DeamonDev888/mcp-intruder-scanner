@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner-mcp-intruder.svg" alt="MCP Intruder — Plan de contrôle MCP universel" width="100%">
+  <img src="https://raw.githubusercontent.com/DeamonDev888/mcp-intruder-scanner/main/assets/banner-mcp-intruder.svg" alt="MCP Intruder — Plan de contrôle MCP universel" width="100%">
 </p>
 
 <p align="center">
