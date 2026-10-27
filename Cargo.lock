@@ -347,6 +347,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "litemcp"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e2fa9d80e8c40de90527b7a91198d93b433e2139545e0e84477db0538842761f"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "lock_api"
 version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -360,6 +370,18 @@ name = "log"
 version = "0.4.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
+
+[[package]]
+name = "mcp_intruder"
+version = "0.6.0"
+dependencies = [
+ "clap",
+ "litemcp",
+ "postgres",
+ "regex",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "md-5"
@@ -814,17 +836,6 @@ name = "utf8parse"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
-
-[[package]]
-name = "mcp_intruder"
-version = "0.5.8"
-dependencies = [
- "clap",
- "postgres",
- "regex",
- "serde",
- "serde_json",
-]
 
 [[package]]
 name = "wasi"

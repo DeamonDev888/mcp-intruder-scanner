@@ -1,4 +1,5 @@
-//! crate-impact — modules de preuve d'impact pour mcp_intruder.
+//! MCP Intruder — moteur de scan de surface offensif + serveur Model Context
+//! Protocol (litemcp, Streamable HTTP).
 //!
 //! Principes NON NEGOCIABLES :
 //! - lecture seule : HTTP GET et DNS exclusivement, jamais de POST/PUT/DELETE,
@@ -8,11 +9,32 @@
 //! - timeout dur sur chaque requête (curl --max-time) ;
 //! - subprocess via args() uniquement, jamais `sh -c` ;
 //! - secrets jamais affichés en clair : masqués avant affichage.
+//!
+//! Organisation :
+//! - moteur de scan : config, modules, orchestrator, report, target_parser,
+//!   utils (promus ici depuis l'ancien binaire main.rs, v0.5.x) ;
+//! - preuve d'impact : net.rs, secrets.rs, dnsinfo.rs, gkeyx.rs ;
+//! - `mcp.rs`        — serveur MCP (outils exposees au client) ;
+//! - `dash/`         — tableau de bord web (serveur HTTP local).
 
 /// Tableau de bord web : serveur HTTP local qui lit le catalogue
 /// PostgreSQL et rend l'interface. Declare ici pour que le binaire
 /// `src/bin/dashboard.rs` puisse l'importer via `mcp_intruder::dash`.
 pub mod dash;
+
+/// Serveur Model Context Protocol : expose le moteur de scan comme outils
+/// MCP. Le binaire `src/bin/mcp_server.rs` construit et sert le serveur ;
+/// `mcp::build_server()` est la seule porte d'entree.
+pub mod mcp;
+
+/// Moteur de scan (ex-cible binaire main.rs, promue en lib v0.6.0 pour que
+/// le serveur MCP et le CLI partagent exactement le meme code).
+pub mod config;
+pub mod modules;
+pub mod orchestrator;
+pub mod report;
+pub mod target_parser;
+pub mod utils;
 //
 // Organisation (ex-lib.rs monolithique de 900 lignes) :
 //   net.rs      — HttpResponse + http_get/http_get_headers (curl, timeout dur)
@@ -37,6 +59,11 @@ pub use secrets::{
     check_google_key, classify_key, extract_emails, extract_remotes, is_high_signal,
     looks_like_env, mask_secret, parse_env, GoogleKeyVerdict, KeyKind,
 };
+
+/// Suite de tests du moteur (ex-main.rs, 123 tests) — compile dans la cible
+/// lib depuis la promotion v0.6.0.
+#[cfg(test)]
+mod engine_tests;
 
 #[cfg(test)]
 mod tests {

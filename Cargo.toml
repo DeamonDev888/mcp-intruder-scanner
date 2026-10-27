@@ -1,13 +1,13 @@
 [package]
 name = "mcp_intruder"
-version = "0.5.8"
+version = "0.6.0"
 edition = "2021"
 authors = ["Deamon <contact@example.com>"]
-description = "Scanner offensif modulaire (DNS, ports, TLS, HTTP) + 18 modules lecture-seule de preuve d'impact (chainx dispatcher) + catalogue PostgreSQL (13 tables)"
+description = "MCP Intruder — serveur Model Context Protocol offensif : expose le moteur de scan de surface (DNS, ports, TLS, HTTP, 39 modules lecture-seule) comme outils MCP (Streamable HTTP, litemcp) + catalogue PostgreSQL"
 license = "Apache-2.0"
 repository = "https://github.com/DeamonDev888/mcp-intruder-scanner"
 homepage = "https://github.com/DeamonDev888/mcp-intruder-scanner"
-keywords = ["security", "recon", "scanner", "audit", "pentest"]
+keywords = ["security", "mcp", "scanner", "audit", "pentest"]
 categories = ["security", "command-line-utilities"]
 
 [dependencies]
@@ -16,3 +16,4 @@ serde_json = "1"
 clap = { version = "4.6.7", features = ["derive"] }
 regex = "1"
 postgres = "0.19"
+litemcp = "0.7"

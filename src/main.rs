@@ -1,17 +1,7 @@
-pub mod config;
-mod modules;
-mod orchestrator;
-mod report;
-mod target_parser;
-mod utils;
-
-#[cfg(test)]
-mod tests;
-
-use config::Config;
-use modules::db::{DatabaseManager, ScanHistoryEntry};
-use orchestrator::AuditOrchestrator;
-use target_parser::{TargetParser, TargetVerdict};
+use mcp_intruder::config::Config;
+use mcp_intruder::modules::db::{DatabaseManager, ScanHistoryEntry};
+use mcp_intruder::orchestrator::AuditOrchestrator;
+use mcp_intruder::target_parser::{TargetParser, TargetVerdict};
 
 fn main() {
     // Panic hook global : restaure le curseur terminal avant tout message de panic
