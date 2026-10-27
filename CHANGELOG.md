@@ -4,6 +4,13 @@ Toutes les modifications notables de `mcp_intruder` sont documentées ici.
 
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.6.1] — 2026-10-26
+
+### Changed
+- README : nouvelle bannière SVG (réticule MCP + dragon Kali), retrait de la tagline
+  « Cyber Intelligence & Offensive Surface Engine 360° », ancienne PNG (831 Ko) retirée
+  du dépôt — le paquet publié s allège d autant.
+
 ## [0.6.0] — 2026-10-26
 
 ### Changed — BREAKING
