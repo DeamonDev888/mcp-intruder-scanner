@@ -65,4 +65,3 @@ pub fn list_targets(c: &mut Client) -> Vec<(String, i64, i64, String)> {
     })
     .collect()
 }
-

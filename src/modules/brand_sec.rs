@@ -31,6 +31,34 @@ pub struct BrandSecResult {
 
 pub struct BrandSecAuditor;
 
+/// Entrée dnstwist (-f json) : objet {domain, fuzzer, dns_a}. Tous les
+/// champs optionnels : les entrées sans résolution DNS n'ont parfois pas
+/// de clé dns_a du tout.
+#[derive(serde::Deserialize, Default)]
+struct DnstwistEntry {
+    #[serde(default)]
+    domain: String,
+    #[serde(default)]
+    fuzzer: String,
+    #[serde(default)]
+    dns_a: Vec<String>,
+}
+
+/// Décode la sortie de dnstwist. Tolérance : si l'outil a pollué stdout
+/// (bannière avant le JSON), isole le premier '[' ... dernier ']'.
+fn parse_dnstwist_entries(json: &str) -> Vec<DnstwistEntry> {
+    if let Ok(entries) = serde_json::from_str::<Vec<DnstwistEntry>>(json) {
+        return entries;
+    }
+    let Some(start) = json.find('[') else {
+        return Vec::new();
+    };
+    let Some(end) = json.rfind(']') else {
+        return Vec::new();
+    };
+    serde_json::from_str(&json[start..=end]).unwrap_or_default()
+}
+
 impl BrandSecAuditor {
     pub fn audit(target: &str) -> BrandSecResult {
         let start = Instant::now();
@@ -73,45 +101,17 @@ impl BrandSecAuditor {
 
     fn parse_json(json: &str, target: &str) -> Vec<LookalikeDomain> {
         let mut list = Vec::new();
-        let mut rest = json;
-
-        while let Some(obj_start) = rest.find('{') {
-            rest = &rest[obj_start..];
-            let obj_end = match rest.find('}') {
-                Some(e) => e + 1,
-                None => break,
-            };
-            let obj_str = &rest[..obj_end];
-            rest = &rest[obj_end..];
-
-            let domain = crate::utils::extract_json_str(obj_str, "domain").unwrap_or_default();
-            let fuzzer = crate::utils::extract_json_str(obj_str, "fuzzer").unwrap_or_default();
-
-            if !domain.is_empty() && domain != target && fuzzer != "*original" {
-                // Extraire IP si présente dans dns_a
-                let ip = if let Some(a_pos) = obj_str.find("\"dns_a\":") {
-                    let a_part = &obj_str[a_pos + 8..];
-                    if let Some(q_start) = a_part.find('"') {
-                        let after_q = &a_part[q_start + 1..];
-                        if let Some(q_end) = after_q.find('"') {
-                            let ip_val = &after_q[..q_end];
-                            if !ip_val.starts_with('!') {
-                                Some(ip_val.to_string())
-                            } else {
-                                None
-                            }
-                        } else {
-                            None
-                        }
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                };
-
-                list.push(LookalikeDomain { domain, fuzzer, ip });
+        for e in parse_dnstwist_entries(json) {
+            if e.domain.is_empty() || e.domain == target || e.fuzzer == "*original" {
+                continue;
             }
+            // Première IP de dns_a ; une valeur "!service" = pas résolue.
+            let ip = e.dns_a.first().filter(|v| !v.starts_with('!')).cloned();
+            list.push(LookalikeDomain {
+                domain: e.domain,
+                fuzzer: e.fuzzer,
+                ip,
+            });
         }
 
         list

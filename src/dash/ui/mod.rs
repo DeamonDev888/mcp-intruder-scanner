@@ -285,7 +285,6 @@ pub fn page(title: &str) -> String {
     page_shell(title, "tableau de bord de sécurité", &body_skeleton())
 }
 
-
 // Squelette HTML, CSS et JS extraits dans des sous-modules (ex-ui.rs, 3 432 l.).
 mod css;
 mod js;

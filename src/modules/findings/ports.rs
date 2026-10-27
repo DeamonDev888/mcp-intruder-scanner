@@ -4,7 +4,10 @@ use super::*;
 
 impl FindingsEngine {
     /// 2. Audit Ports & Services (bannières, ports à risque, bases de données).
-    pub(super) fn eval_ports(ports: &[PortScanResult], target_domain: &str) -> Vec<SecurityFinding> {
+    pub(super) fn eval_ports(
+        ports: &[PortScanResult],
+        target_domain: &str,
+    ) -> Vec<SecurityFinding> {
         let mut findings = Vec::new();
         // Artefacts d'edge uniforme : un UNIQUE finding INFO agrege (jamais
         // de HIGH fantomes — l'edge accepte TCP et parle HTTP partout, aucun

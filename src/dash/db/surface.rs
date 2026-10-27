@@ -199,4 +199,3 @@ pub fn fetch_loot(c: &mut Client, scan: i64) -> Vec<LootRow> {
     })
     .collect()
 }
-

@@ -136,4 +136,3 @@ pub fn fetch_series(c: &mut Client, target: Option<String>) -> (Series, Series) 
         },
     )
 }
-

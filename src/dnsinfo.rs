@@ -85,4 +85,3 @@ pub fn spoof_verdict(spf: Option<&str>, dmarc_p: Option<&str>) -> (&'static str,
         },
     }
 }
-

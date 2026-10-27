@@ -29,8 +29,8 @@ mod secrets;
 
 pub use dnsinfo::{dig_txt, dmarc_policy, spf_all_qualifier, spoof_verdict};
 pub use gkeyx::{
-    extract_google_project, gemini_models, google_probe_classify, gkeyx_exploit, gkeyx_report,
-    gkeyx_verdict, GProbe, GProbeStatus,
+    extract_google_project, gemini_models, gkeyx_exploit, gkeyx_report, gkeyx_verdict,
+    google_probe_classify, GProbe, GProbeStatus,
 };
 pub use net::{http_get, http_get_headers, HttpResponse};
 pub use secrets::{

@@ -1,6 +1,18 @@
 use std::fs;
 use std::time::Instant;
 
+/// Forme du JSON écrit par theHarvester (-f). Champs optionnels : certaines
+/// versions n'écrivent que hosts + emails.
+#[derive(Debug, Default, serde::Deserialize)]
+struct HarvesterJson {
+    #[serde(default)]
+    hosts: Vec<String>,
+    #[serde(default)]
+    emails: Vec<String>,
+    #[serde(default)]
+    ips: Vec<String>,
+}
+
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct TheHarvesterResult {
     pub hosts: Vec<String>,
@@ -50,45 +62,27 @@ impl TheHarvesterAuditor {
         let _ = fs::remove_file(&json_path);
         let _ = fs::remove_file(&xml_path);
         if let Ok(content) = content {
-            // Extract hosts array
-            if let Some(pos) = content.find("\"hosts\":[") {
-                let rest = &content[pos + 9..];
-                if let Some(end) = rest.find(']') {
-                    let array_str = &rest[..end];
-                    for item in array_str.split(',') {
-                        let clean = item.trim().trim_matches('"').trim().to_lowercase();
-                        if !clean.is_empty() && !result.hosts.contains(&clean) {
-                            result.hosts.push(clean);
-                        }
-                    }
+            // theHarvester -f <fichier>.json : objet {"hosts":[], "emails":[],
+            // "ips":[]}. serde_json remplace l'extraction manuelle par
+            // find/accolades (source historique de findings fantômes).
+            let parsed: HarvesterJson = serde_json::from_str(&content).unwrap_or_default();
+
+            for host in parsed.hosts {
+                let clean = host.trim().to_lowercase();
+                if !clean.is_empty() && !result.hosts.contains(&clean) {
+                    result.hosts.push(clean);
                 }
             }
-
-            // Extract emails array
-            if let Some(pos) = content.find("\"emails\":[") {
-                let rest = &content[pos + 10..];
-                if let Some(end) = rest.find(']') {
-                    let array_str = &rest[..end];
-                    for item in array_str.split(',') {
-                        let clean = item.trim().trim_matches('"').trim().to_lowercase();
-                        if !clean.is_empty() && !result.emails.contains(&clean) {
-                            result.emails.push(clean);
-                        }
-                    }
+            for email in parsed.emails {
+                let clean = email.trim().to_lowercase();
+                if !clean.is_empty() && !result.emails.contains(&clean) {
+                    result.emails.push(clean);
                 }
             }
-
-            // Extract ips array
-            if let Some(pos) = content.find("\"ips\":[") {
-                let rest = &content[pos + 7..];
-                if let Some(end) = rest.find(']') {
-                    let array_str = &rest[..end];
-                    for item in array_str.split(',') {
-                        let clean = item.trim().trim_matches('"').trim();
-                        if !clean.is_empty() && !result.ips.contains(&clean.to_string()) {
-                            result.ips.push(clean.to_string());
-                        }
-                    }
+            for ip in parsed.ips {
+                let clean = ip.trim().to_string();
+                if !clean.is_empty() && !result.ips.contains(&clean) {
+                    result.ips.push(clean);
                 }
             }
         }

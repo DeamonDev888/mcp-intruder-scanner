@@ -260,4 +260,3 @@ pub fn fetch_modules(c: &mut Client, scan: i64) -> Vec<ModuleStat> {
         })
         .collect()
 }
-

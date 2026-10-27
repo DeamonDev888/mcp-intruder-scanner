@@ -1,7 +1,7 @@
 use std::fs;
 use std::time::Instant;
 
-use crate::utils::extract_json_str;
+use serde_json::Value;
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct DnsreconSrv {
@@ -59,18 +59,25 @@ impl DnsreconAuditor {
         let content = fs::read_to_string(&json_path);
         let _ = fs::remove_file(&json_path);
         if let Ok(content) = content {
-            // Parse json array of objects
-            for chunk in content.split('{') {
-                if !chunk.contains('}') {
-                    continue;
-                }
-                let obj = format!("{{{chunk}");
-                let r_type = extract_json_str(&obj, "type").unwrap_or_default();
+            // dnsrecon -j écrit un tableau d'objets hétérogènes. serde_json
+            // remplace le découpage manuel par accolades (source historique
+            // de findings fantômes sur les valeurs échappées).
+            let records: Vec<Value> = serde_json::from_str(&content).unwrap_or_default();
+            for rec in records {
+                let r_type = rec.get("type").and_then(Value::as_str).unwrap_or_default();
 
-                match r_type.as_str() {
+                match r_type {
                     "A" => {
-                        let domain_str = extract_json_str(&obj, "domain").unwrap_or_default();
-                        let address = extract_json_str(&obj, "address").unwrap_or_default();
+                        let domain_str = rec
+                            .get("domain")
+                            .and_then(Value::as_str)
+                            .unwrap_or_default()
+                            .to_string();
+                        let address = rec
+                            .get("address")
+                            .and_then(Value::as_str)
+                            .unwrap_or_default()
+                            .to_string();
                         if !domain_str.is_empty()
                             && !address.is_empty()
                             // Frontiere de point obligatoire : "evil.example.com"
@@ -85,11 +92,31 @@ impl DnsreconAuditor {
                         }
                     }
                     "SRV" => {
-                        let target = extract_json_str(&obj, "target").unwrap_or_default();
-                        let address = extract_json_str(&obj, "address").unwrap_or_default();
-                        let domain_str = extract_json_str(&obj, "domain").unwrap_or_default();
-                        let port_str = extract_json_str(&obj, "port").unwrap_or_default();
-                        let port = port_str.parse::<u16>().unwrap_or(0);
+                        let target = rec
+                            .get("target")
+                            .and_then(Value::as_str)
+                            .unwrap_or_default()
+                            .to_string();
+                        let address = rec
+                            .get("address")
+                            .and_then(Value::as_str)
+                            .unwrap_or_default()
+                            .to_string();
+                        let domain_str = rec
+                            .get("domain")
+                            .and_then(Value::as_str)
+                            .unwrap_or_default()
+                            .to_string();
+                        // dnsrecon écrit le port en nombre ; une version
+                        // ancienne peut l'écrire en chaîne.
+                        let port = rec
+                            .get("port")
+                            .and_then(|v| {
+                                v.as_u64()
+                                    .map(|n| n as u16)
+                                    .or_else(|| v.as_str().and_then(|s| s.parse::<u16>().ok()))
+                            })
+                            .unwrap_or(0);
 
                         result.srv_records.push(DnsreconSrv {
                             name: domain_str,
@@ -99,13 +126,17 @@ impl DnsreconAuditor {
                         });
                     }
                     "NS" => {
-                        let target = extract_json_str(&obj, "target").unwrap_or_default();
+                        let target = rec
+                            .get("target")
+                            .and_then(Value::as_str)
+                            .unwrap_or_default()
+                            .to_string();
                         if !target.is_empty() && !result.nameservers.contains(&target) {
                             result.nameservers.push(target.clone());
                         }
 
-                        if let Some(version) = extract_json_str(&obj, "Version") {
-                            let clean_v = version.trim_matches('"').trim().to_string();
+                        if let Some(version) = rec.get("Version").and_then(Value::as_str) {
+                            let clean_v = version.trim().to_string();
                             if !clean_v.is_empty()
                                 && !result
                                     .bind_versions
@@ -116,7 +147,8 @@ impl DnsreconAuditor {
                         }
                     }
                     "SOA" if result.soa_mname.is_none() => {
-                        result.soa_mname = extract_json_str(&obj, "mname");
+                        result.soa_mname =
+                            rec.get("mname").and_then(Value::as_str).map(String::from);
                     }
                     _ => {}
                 }

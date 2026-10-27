@@ -24,6 +24,10 @@ pub fn json_escape(s: &str) -> String {
 
 /// Extrait la valeur d'une clé chaîne dans un document JSON.
 /// Clé quotée UNIQUEMENT : évite le faux positif "domain" matchant "subdomain".
+/// Secours : les modules d'audit lisent désormais leurs JSON via serde_json
+/// (dnsrecon_audit, brand_sec, theharvester_audit) ; cet extracteur manuel
+/// reste disponible pour les sorties brutes non conformes.
+#[allow(dead_code)]
 pub fn extract_json_str(json: &str, key: &str) -> Option<String> {
     let pattern = format!("\"{}\":", key);
     let pos = json.find(&pattern)?;

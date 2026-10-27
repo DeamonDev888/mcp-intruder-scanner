@@ -155,4 +155,3 @@ pub fn fetch_impacts(c: &mut Client, target: &str) -> Vec<ImpactVerdict> {
     })
     .collect()
 }
-

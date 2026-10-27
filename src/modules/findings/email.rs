@@ -4,7 +4,10 @@ use super::*;
 
 impl FindingsEngine {
     /// 4. Audit Messagerie Avancée (SPF lookups, DKIM, MTA-STS, BIMI).
-    pub(super) fn eval_email(email_sec: &EmailSecurityResult, is_bare_ip: bool) -> Vec<SecurityFinding> {
+    pub(super) fn eval_email(
+        email_sec: &EmailSecurityResult,
+        is_bare_ip: bool,
+    ) -> Vec<SecurityFinding> {
         let mut findings = Vec::new();
         if !is_bare_ip && !email_sec.spf_lookup_valid {
             findings.push(SecurityFinding {

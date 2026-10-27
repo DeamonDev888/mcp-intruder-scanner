@@ -58,4 +58,3 @@ pub fn http_get_headers(
         body,
     })
 }
-

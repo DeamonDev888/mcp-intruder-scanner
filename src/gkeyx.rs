@@ -338,4 +338,3 @@ pub fn gkeyx_exploit(key: &str, probes: &[GProbe], timeout_secs: u64) -> Vec<Str
     }
     notes
 }
-

@@ -209,4 +209,3 @@ pub fn extract_remotes(config: &str) -> Vec<String> {
 // gkeyx — enumeration des privileges d'une cle Google (AIza...)
 // Sondes GET lecture-seule, une par service : ce que la cle ouvre.
 // ============================================================
-
