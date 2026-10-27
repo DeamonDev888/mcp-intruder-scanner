@@ -15,7 +15,8 @@
 # 🛡️ MCP INTRUDER
 
 > **Moteur modulaire d'audit de sécurité offensif et de cartographie de surface d'attaque.**
-> Conçu pour être exécuté aussi bien par un **opérateur humain** (TUI interactif) que par un **agent IA autonome** en ligne de commande (CLI / JSON natif).
+> Conçu pour être exécuté aussi bien par un **opérateur humain** (TUI interactif) que par une **super-intelligence** :
+> agent IA autonome branché en natif sur le protocole **MCP** (Model Context Protocol), servi par [LiteMCP](https://github.com/DeamonDev888/litemcp).
 
 ---
 
@@ -273,7 +274,13 @@ mcp_intruder impacts                            # dashboard
 
 ## 🖥️ Serveur MCP
 
-Le binaire `mcp_server` expose le scanner aux agents IA via le protocole **MCP** (Model Context Protocol) :
+Le binaire `mcp_server` expose le scanner aux agents IA via le protocole **MCP** (Model Context Protocol),
+propulsé par [LiteMCP](https://github.com/DeamonDev888/litemcp) — la lib MCP la plus légère et la plus rapide
+(Streamable HTTP only, zéro runtime async, serde uniquement) :
+
+<p align="center">
+  <img src="assets/banner-litemcp.svg" alt="MCP Intruder × LiteMCP" width="100%">
+</p>
 
 - **Transport** : Streamable HTTP — `POST /mcp`, bind par défaut `127.0.0.1:7808`
 - **Santé** : endpoint `GET /health`
