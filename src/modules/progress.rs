@@ -203,7 +203,7 @@ impl ProgressTracker {
         // 2. Header HUD Box
         println!("\x1b[2K\r\x1b[38;5;141m╔══════════════════════════════════════════════════════════════════════════════╗\x1b[0m");
         println!(
-            "\x1b[2K\r\x1b[38;5;141m║\x1b[0m \x1b[1m\x1b[38;5;51m>> MCP-INTRUDER OFFENSIVE ENGINE 360° — MONITOR D'AUDIT EN DIRECT <<\x1b[0m               \x1b[38;5;141m║\x1b[0m"
+            "\x1b[2K\r\x1b[38;5;141m║\x1b[0m \x1b[1m\x1b[38;5;51m>> MCP INTRUDER OFFENSIVE ENGINE 360° — MONITOR D'AUDIT EN DIRECT <<\x1b[0m         \x1b[38;5;141m║\x1b[0m"
         );
         println!(
             "\x1b[2K\r\x1b[38;5;141m║\x1b[0m Cible : \x1b[38;5;220m\x1b[1m{:<18}\x1b[0m │ Durée : \x1b[38;5;51m{}\x1b[0m │ Moteurs actifs : \x1b[38;5;82m{}/{}\x1b[0m  \x1b[38;5;141m║\x1b[0m",

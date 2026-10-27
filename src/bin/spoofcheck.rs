@@ -1,7 +1,7 @@
 //! spoofcheck — preuve d'usurpabilite email d'un domaine (analyse SPF/DMARC, zero envoi).
+use mcp_intruder::{dig_txt, dmarc_policy, spoof_verdict};
 use std::process::Command;
 use std::process::Stdio;
-use mcp_intruder::{dig_txt, dmarc_policy, spoof_verdict};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();

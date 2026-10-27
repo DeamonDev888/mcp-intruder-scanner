@@ -1,7 +1,7 @@
 //! keyprobe — classification et verification NON DESTRUCTIVE des cles API trouvees.
 //! Lit les cles depuis stdin (une par ligne) : jamais en argument (history/ps).
-use std::io::BufRead;
 use mcp_intruder::{check_google_key, classify_key, mask_secret, KeyKind};
+use std::io::BufRead;
 
 fn main() {
     let stdin = std::io::stdin();

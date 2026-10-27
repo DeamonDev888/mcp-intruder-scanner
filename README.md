@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/mcp_intruder_banner.png" alt="MCP-INTRUDER OFFENSIVE SURFACE SCANNER" width="100%">
+  <img src="assets/mcp_intruder_banner.png" alt="MCP INTRUDER OFFENSIVE SURFACE SCANNER" width="100%">
 </p>
 
 <p align="center">
@@ -12,7 +12,7 @@
 
 ---
 
-# 🛡️ MCP-INTRUDER — Cyber Intelligence & Offensive Surface Engine 360°
+# 🛡️ MCP INTRUDER — Cyber Intelligence & Offensive Surface Engine 360°
 
 > **Moteur modulaire d'audit de sécurité offensif et de cartographie de surface d'attaque.**
 > Conçu pour être exécuté aussi bien par un **opérateur humain** (TUI interactif) que par un **agent IA autonome** en ligne de commande (CLI / JSON natif).
@@ -137,7 +137,7 @@ mcp_intruder history 5 --target example.com
 Pour un utilisateur en direct sur le serveur Kali, `mcp-intruder` propose une console cyberpunk riche avec monitoring des threads en direct, sparkline des durées, ETA dynamique, et banner final adaptatif (💎 EXCELLENT → ☠️ CRITIQUE) :
 
 <p align="center">
-  <img src="assets/mcp-intruder_tui_logo.svg" alt="MCP-Intruder Scanner TUI Interface" width="920">
+  <img src="assets/mcp-intruder_tui_logo.svg" alt="MCP Intruder TUI Interface" width="920">
 </p>
 
 ---
@@ -260,7 +260,7 @@ Tous lecture-seule stricte (GET/DNS uniquement). Verdicts persistés dans `audit
 | `mcp_intruder impacts [--live]` | Dashboard DB + re-vérification live des clés |
 
 ```bash
-cargo install --locked mcp_intruder
+cargo install --path .
 mcp_intruder chainx                              # campagne auto sur 30j
 mcp_intruder chainx grocer.example.com --force             # une cible
 mcp_intruder impacts                            # dashboard
@@ -275,8 +275,18 @@ mcp_intruder impacts                            # dashboard
 
 ---
 
+## 🖥️ Serveur MCP
+
+Le binaire `mcp_server` expose le scanner aux agents IA via le protocole **MCP** (Model Context Protocol) :
+
+- **Transport** : Streamable HTTP — `POST /mcp`, bind par défaut `127.0.0.1:7808`
+- **Santé** : endpoint `GET /health`
+- **16 outils** : `ping`, `scan_target`, `scan_history`, `tools_diag`, `dns_audit`, `tls_audit`, `http_audit`, `whois_audit`, `geo_locate`, `email_sec_audit`, `subdomains_audit`, `crt_sh_lookup`, `waf_detect`, `tech_stack_audit`, `dnsrecon_audit`, `dns_hardening_audit`
+
+---
+
 <p align="center">
-  <img src="assets/mcp-intruder_logo.svg" alt="MCP-Intruder Logo" width="380">
+  <img src="assets/mcp-intruder_logo.svg" alt="MCP Intruder Logo" width="380">
   <br>
   <sub>Moteur d'audit offensif · 24 modules · 17 modules d'impact · Persistance PostgreSQL · CLI/TUI/JSON</sub>
 </p>

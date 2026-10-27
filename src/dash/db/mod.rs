@@ -1,4 +1,4 @@
-// src/dash/db.rs — Couche PostgreSQL du tableau de bord mcp-intruder.
+// src/dash/db.rs — Couche PostgreSQL du tableau de bord MCP Intruder.
 //
 // Toutes les valeurs affichées par le tableau de bord proviennent d'ici :
 // aucune donnée simulée, aucun chiffre en dur. Les compteurs de modules sont

@@ -1,4 +1,4 @@
-// src/dash/ui.rs — Design system 2026 du tableau de bord MCP-Intruder.
+// src/dash/ui.rs — Design system 2026 du tableau de bord MCP Intruder.
 // -----------------------------------------------------------------------------
 // Direction artistique « Ermitage Industries » : fond encre #0d0a07, surfaces
 // #16120d, papier #ece5d8, accent ambre #d9a24e, filets hairline, grain

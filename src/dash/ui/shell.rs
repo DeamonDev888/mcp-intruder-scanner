@@ -7,7 +7,7 @@ pub const SHELL: &str = r##"<!DOCTYPE html>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <meta name="description" content="@@META@@">
-<meta name="generator" content="mcp-intruder.dash">
+<meta name="generator" content="intruder.dash">
 <title>@@TITLE@@</title>
 <style>@@CSS@@</style>
 </head>
@@ -19,7 +19,7 @@ pub const SHELL: &str = r##"<!DOCTYPE html>
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <div class="boot-skeleton" id="boot" aria-hidden="true"></div>
 <header class="app-head">
-  <div class="app-brand">mcp-intruder<i>.</i></div>
+  <div class="app-brand">intruder<i>.</i></div>
   <div class="app-title" id="apptitle">tableau de bord</div>
   <div class="app-actions">
     <button class="app-btn" id="btn-scan" title="Lancer un scan sur une cible">LANCER UN SCAN</button>

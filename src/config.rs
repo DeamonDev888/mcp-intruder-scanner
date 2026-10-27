@@ -176,25 +176,25 @@ enum Commands {
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "mcp-intruder",
+    name = "mcp_intruder",
     version,
-    about = "MCP-INTRUDER CYBERSCAN 360° — Scanner de surface offensif",
+    about = "MCP INTRUDER 360° — Scanner de surface offensif",
     arg_required_else_help = true,
     after_help = "PROFILS PRÊTS À L'EMPLOI:\n  \
-        mcp-intruder cible.com -1              Audit rapide Core Rust (~1.5s)\n  \
-        mcp-intruder cible.com -2              Périmètre web (WAF+WhatWeb+SSLScan+Dnstwist+HTTPx)\n  \
-        mcp-intruder cible.com -3              360° complet — tous les outils Kali (SQLMap opt-in via --sqlmap)\n  \
-        mcp-intruder cible.com -4              Infrastructure (Nmap+SSLScan+RustScan)\n  \
-        mcp-intruder cible.com -5              Vulnérabilités (Nuclei+Nikto+Nmap+SQLMap)\n  \
-        mcp-intruder cible.com -d              Découverte endpoints (Ffuf+Nikto+WAF)\n\n\
+        mcp_intruder cible.com -1        Audit rapide Core Rust (~1.5s)\n  \
+        mcp_intruder cible.com -2        Périmètre web (WAF+WhatWeb+SSLScan+Dnstwist+HTTPx)\n  \
+        mcp_intruder cible.com -3        360° complet — tous les outils Kali (SQLMap opt-in via --sqlmap)\n  \
+        mcp_intruder cible.com -4        Infrastructure (Nmap+SSLScan+RustScan)\n  \
+        mcp_intruder cible.com -5        Vulnérabilités (Nuclei+Nikto+Nmap+SQLMap)\n  \
+        mcp_intruder cible.com -d        Découverte endpoints (Ffuf+Nikto+WAF)\n\n\
         MODULES À LA CARTE:\n  \
-        mcp-intruder cible.com --nmap --nuclei\n  \
-        mcp-intruder cible.com -m ssl,tech,osint\n  \
-        mcp-intruder cible.com --ports 22,80,443 --json\n\n\
+        mcp_intruder cible.com --nmap --nuclei\n  \
+        mcp_intruder cible.com -m ssl,tech,osint\n  \
+        mcp_intruder cible.com --ports 22,80,443 --json\n\n\
         BASE DE DONNÉES:\n  \
-        mcp-intruder history 10\n  \
-        mcp-intruder history --target cible.com\n  \
-        mcp-intruder tools"
+        mcp_intruder history 10\n  \
+        mcp_intruder history --target cible.com\n  \
+        mcp_intruder tools"
 )]
 struct Cli {
     /// Cible à auditer (domaine ou IP)
@@ -375,7 +375,7 @@ impl Config {
         if target.is_empty() {
             // Exit code 1 (et non 0) : un pipeline ne doit pas croire au succès
             return Err(
-                "Aucune cible fournie. Usage : mcp-intruder <TARGET> [OPTIONS] | mcp-intruder history | mcp-intruder tools"
+                "Aucune cible fournie. Usage : mcp_intruder <TARGET> [OPTIONS] | mcp_intruder history | mcp_intruder tools"
                     .to_string(),
             );
         }

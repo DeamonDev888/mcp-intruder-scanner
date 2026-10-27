@@ -1,6 +1,6 @@
 //! envx — preuve d'impact d'un .env expose : parse, signaux forts, masque tout.
-use std::io::Write;
 use mcp_intruder::{http_get, is_high_signal, looks_like_env, mask_secret, parse_env};
+use std::io::Write;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();

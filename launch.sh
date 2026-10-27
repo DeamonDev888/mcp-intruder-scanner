@@ -7,7 +7,7 @@
 #   ╚████╔╝ ███████╗██║  ██║██║██████╔╝   ██║   
 #    ╚═══╝  ╚══════╝╚═╝  ╚═╝╚═╝╚═════╝    ╚═╝   
 #
-#   MCP-INTRUDER CYBER INTELLIGENCE & AUDIT CONSOLE (v2.2 TUI)
+#   MCP INTRUDER CYBER INTELLIGENCE & AUDIT CONSOLE (v2.2 TUI)
 #   Automated 360° Offensive Surface Engine
 # ==============================================================================
 
@@ -1654,7 +1654,7 @@ interactive_tui() {
                 ;;
             EOF|$'\x1b'|[qQ]) # Escape, Q or EOF
                 show_cursor
-                echo -e "\n${C_CYAN}Fermeture de la Console MCP-Intruder. À bientôt !${C_RST}\n"
+                echo -e "\n${C_CYAN}Fermeture de la Console MCP Intruder. À bientôt !${C_RST}\n"
                 exit 0
                 ;;
         esac

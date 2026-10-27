@@ -117,7 +117,7 @@ pub fn build_overview(db_name: &str, scan: Option<i64>) -> Overview {
 fn route(server: &Server, method: &str, path: &str, query: &str, body: &str) -> Resp {
     match (method, path) {
         ("GET", "/") | ("GET", "/index.html") => {
-            html(ui::page_shell("mcp-intruder · tableau de bord", "scanner offensif · lecture seule", ""))
+            html(ui::page_shell("MCP Intruder · tableau de bord", "scanner offensif · lecture seule", ""))
         }
 
         ("GET", "/api/overview") => {

@@ -4,8 +4,8 @@
 //! DATA (youtube/translate/customsearch). Lecture seule : GET uniquement,
 //! timeout dur, aucun effet de bord. Phase exploit : fuite du n° de projet
 //! + test differentiel de bypass de la restriction referrer.
-use std::io::BufRead;
 use mcp_intruder::{gkeyx_exploit, gkeyx_report, gkeyx_verdict, mask_secret, GProbeStatus};
+use std::io::BufRead;
 
 fn main() {
     let stdin = std::io::stdin();

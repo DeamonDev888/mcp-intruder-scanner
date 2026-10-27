@@ -1,6 +1,6 @@
 //! gitdump — preuve d'impact d'un depot .git expose : remotes + identites, sans dump complet.
-use std::io::Write;
 use mcp_intruder::{extract_emails, extract_remotes, http_get, mask_secret};
+use std::io::Write;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();

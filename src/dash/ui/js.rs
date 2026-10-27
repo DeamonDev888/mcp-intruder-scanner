@@ -1412,7 +1412,7 @@ function buildChrome(){
     tb.id='topbar';
     tb.innerHTML=
       '<button class="btn btn-ico rail-burger" type="button" data-rail-toggle="1" aria-label="Ouvrir la navigation">☰</button>'+
-      '<a class="brand" href="#hero"><span class="brand-mark">MCP-Intruder<em>.</em>dash</span>'+
+      '<a class="brand" href="#hero"><span class="brand-mark">Intruder<em>.</em>dash</span>'+
       '<span class="brand-sub">security surface</span></a>'+
       '<div class="search">'+
       '<span class="search-i" aria-hidden="true">⌕</span>'+
@@ -1466,7 +1466,7 @@ function paintRail(){
     '<span class="sw-track"></span><span class="sw-l">mode noob</span></label>'+
     '<label class="sw"><input type="checkbox" data-pref="cursor"'+(S.cursor?' checked':'')+'>'+
     '<span class="sw-track"></span><span class="sw-l">curseur</span></label>'+
-    '<p class="rail-meta" id="rail-meta">'+esc((S.data&&S.data.db_name)||'mcp-intruder')+'</p>'+
+    '<p class="rail-meta" id="rail-meta">'+esc((S.data&&S.data.db_name)||'mcp_intruder')+'</p>'+
     '<button class="btn btn-xs" type="button" data-reset="1" style="justify-content:center">réinitialiser</button>'+
     '</div>';
   QSA('.rail-link',rail).forEach(function(a){
@@ -2050,7 +2050,7 @@ function exportJSON(){
   var blob=new Blob([JSON.stringify(S.data,null,2)],{type:'application/json'});
   var a=el('a');
   a.href=URL.createObjectURL(blob);
-  a.download='mcp-intruder-overview-'+(new Date()).toISOString().slice(0,10)+'.json';
+  a.download='mcp_intruder-overview-'+(new Date()).toISOString().slice(0,10)+'.json';
   D.body.appendChild(a);a.click();
   setTimeout(function(){URL.revokeObjectURL(a.href);if(a.parentNode)a.parentNode.removeChild(a);},600);
   toast('Export','JSON téléchargé.','ok');
