@@ -1,5 +1,6 @@
 //! envx — preuve d'impact d'un .env expose : parse, signaux forts, masque tout.
 use mcp_intruder::{http_get, is_high_signal, looks_like_env, mask_secret, parse_env};
+#[cfg(unix)]
 use std::io::Write;
 
 fn main() {
@@ -40,10 +41,14 @@ fn main() {
                 println!("  (aucune credential directe — verifier les vars d'app nonetheless)");
             }
             // preuve conservee cote operateur seulement, jamais affichee en clair
-            if let Ok(mut f) = std::fs::File::create("/tmp/envx_proof.env") {
-                use std::os::unix::fs::PermissionsExt;
-                let _ = f.set_permissions(std::fs::Permissions::from_mode(0o600));
-                let _ = writeln!(f, "{}", r.body);
+            // (permissions 0600 : mode Unix uniquement — compilation croisee Windows sans `os::unix`)
+            #[cfg(unix)]
+            {
+                if let Ok(mut f) = std::fs::File::create("/tmp/envx_proof.env") {
+                    use std::os::unix::fs::PermissionsExt;
+                    let _ = f.set_permissions(std::fs::Permissions::from_mode(0o600));
+                    let _ = writeln!(f, "{}", r.body);
+                }
             }
             std::process::exit(0);
         }

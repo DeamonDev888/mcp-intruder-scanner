@@ -61,6 +61,12 @@ pub(crate) const RAW_OUTPUT_MAX_CHARS: usize = 2000;
 /// pend (le thread continue en arriere-plan, son resultat est ignore).
 const TOOL_TIMEOUT: Duration = Duration::from_secs(1800);
 
+/// Aucun argument attendu : `ping` est une sonde sans paramètre — schéma
+/// objet strict vide (tout champ inconnu est refusé en -32602 par le
+/// schéma, avant d'atteindre le handler).
+#[derive(serde::Deserialize)]
+struct NoArgs {}
+
 /// Construit le serveur MCP complet sur la base PostgreSQL par defaut
 /// ([`DEFAULT_DB_NAME`]). Voir [`build_server_with_db`].
 pub fn build_server() -> ServerBuilder {
@@ -80,10 +86,11 @@ pub fn build_server() -> ServerBuilder {
 pub fn build_server_with_db(db_name: &str) -> ServerBuilder {
     let db = db_name.to_string();
 
-    let builder = ServerBuilder::new(env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")).tool(
+    let builder = ServerBuilder::new(env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")).tool_parse(
         "ping",
         "Sonde de disponibilité du serveur MCP Intruder (aucun scan)",
-        |_args: &serde_json::Value| {
+        zod::object().strict(),
+        |_args: NoArgs| -> ToolResult {
             Ok(serde_json::json!({
                 "pong": true,
                 "server": env!("CARGO_PKG_NAME"),
@@ -125,12 +132,20 @@ pub fn build_server_with_db(db_name: &str) -> ServerBuilder {
 // HELPERS PARTAGES — resolution de cible, garde anti-panic, troncature
 // ==============================================================================
 
+/// Valide UNIQUEMENT le format d'une cible (hostname, IP, hote:port) sans
+/// résolution DNS — pour les outils lecture-seule qui interrogent un
+/// domaine directement (DNS, whois, CT...). La cible normalisée est
+/// renvoyée ; tout format invalide devient une erreur MCP classée.
+pub(crate) fn validated_target(target: &str) -> Result<String, ToolError> {
+    TargetParser::validate_format(target)
+        .map_err(|reason| ToolError::invalid_input(format!("cible : {reason}")))
+}
+
 /// Résout une cible (domaine ou IP) et retourne la PREMIERE adresse IP,
 /// meme contrat que main.rs (`TargetParser` -> premiere IP -> orchestrateur).
 /// Toute cible invalide ou injoignable devient une erreur lisible par le
 /// client MCP — jamais de panic.
-pub(crate) fn resolve_first_ip(target: &str) -> Result<String, ToolError> {
-    match TargetParser::resolve(target) {
+pub(crate) fn resolve_first_ip(target: &str) -> Result<String, ToolError> {    match TargetParser::resolve(target) {
         TargetVerdict::Resolved(ips) => ips
             .first()
             .map(std::string::ToString::to_string)
@@ -318,5 +333,50 @@ mod tests {
             .expect("tools/call doit répondre");
         let v: serde_json::Value = serde_json::from_slice(&raw).unwrap();
         assert_eq!(v["error"]["code"], -32602, "réponse : {v}");
+    }
+
+    #[test]
+    fn ping_rejects_unknown_arguments() {
+        let core = build_server().core();
+
+        // ping est une sonde sans paramètre (objet strict vide) : tout
+        // champ fantôme est refusé par le schéma AVANT le handler.
+        let raw = core
+            .dispatch(&rpc(
+                7,
+                "tools/call",
+                r#"{"name":"ping","arguments":{"champ_fantome":1}}"#,
+            ))
+            .expect("tools/call doit répondre");
+        let v: serde_json::Value = serde_json::from_slice(&raw).unwrap();
+        assert_eq!(v["error"]["code"], -32602, "réponse : {v}");
+    }
+
+    #[test]
+    fn audit_rejects_malformed_target_before_network() {
+        let core = build_server().core();
+
+        // La cible passe le schéma (string 1..=253) mais le format est
+        // invalide : le handler doit la refuser (invalid_input) SANS lancer
+        // la moindre requête DNS/HTTP.
+        let raw = core
+            .dispatch(&rpc(
+                8,
+                "tools/call",
+                r#"{"name":"dns_audit","arguments":{"target":"ceci n est pas un domaine!!"}}"#,
+            ))
+            .expect("tools/call doit répondre");
+        let v: serde_json::Value = serde_json::from_slice(&raw).unwrap();
+        assert_eq!(
+            v["result"]["isError"], true,
+            "cible malformée doit donner isError=true : {v}"
+        );
+        let message = v["result"]["structuredContent"]["error"]["message"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(
+            message.contains("invalide"),
+            "l'erreur doit porter sur le format : {v}"
+        );
     }
 }

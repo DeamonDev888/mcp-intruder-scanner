@@ -275,7 +275,8 @@ impl ObscuraAuditor {
 }
 
 /// Vrai sous-domaine : égal ou suffixe ".<target>" — frontière de point obligatoire
-/// ("evil.example.com" n'est PAS un sous-domaine de "example.com").
+/// ("notexample.com" n'est PAS un sous-domaine de "example.com",
+/// "evil.example.com" en EST un).
 pub(crate) fn is_subdomain(domain: &str, target: &str) -> bool {
     domain == target || domain.ends_with(&format!(".{}", target))
 }

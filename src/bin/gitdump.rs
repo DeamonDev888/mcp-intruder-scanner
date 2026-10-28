@@ -1,5 +1,6 @@
 //! gitdump — preuve d'impact d'un depot .git expose : remotes + identites, sans dump complet.
 use mcp_intruder::{extract_emails, extract_remotes, http_get, mask_secret};
+#[cfg(unix)]
 use std::io::Write;
 
 fn main() {
@@ -44,10 +45,14 @@ fn main() {
             for m in mails.iter().take(10) {
                 println!("    - {m}");
             }
-            if let Ok(mut f) = std::fs::File::create("/tmp/gitdump_logs.txt") {
-                use std::os::unix::fs::PermissionsExt;
-                let _ = f.set_permissions(std::fs::Permissions::from_mode(0o600));
-                let _ = write!(f, "{}", log.body);
+            // (permissions 0600 : mode Unix uniquement — compilation croisee Windows sans `os::unix`)
+            #[cfg(unix)]
+            {
+                if let Ok(mut f) = std::fs::File::create("/tmp/gitdump_logs.txt") {
+                    use std::os::unix::fs::PermissionsExt;
+                    let _ = f.set_permissions(std::fs::Permissions::from_mode(0o600));
+                    let _ = write!(f, "{}", log.body);
+                }
             }
         }
     }

@@ -348,9 +348,9 @@ dependencies = [
 
 [[package]]
 name = "litemcp"
-version = "0.7.1"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2fa9d80e8c40de90527b7a91198d93b433e2139545e0e84477db0538842761f"
+checksum = "2381795c20308e1b1fe5d3f39d12004943954cc6fc7a0213363eca7bdbacb0ab"
 dependencies = [
  "serde",
  "serde_json",
@@ -373,7 +373,7 @@ checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
 name = "mcp_intruder"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "clap",
  "litemcp",

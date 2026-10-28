@@ -97,6 +97,37 @@ fn test_target_parser_rejects_invalid_format() {
 }
 
 #[test]
+fn test_validate_format_pure_no_network() {
+    // Acceptés (avec normalisation trim + minuscules), sans aucune résolution.
+    assert_eq!(
+        TargetParser::validate_format("  EXAMPLE.com ").as_deref(),
+        Ok("example.com")
+    );
+    assert_eq!(
+        TargetParser::validate_format("Example.COM:8080").as_deref(),
+        Ok("example.com:8080")
+    );
+    assert_eq!(TargetParser::validate_format("127.0.0.1").as_deref(), Ok("127.0.0.1"));
+    assert_eq!(TargetParser::validate_format("::1").as_deref(), Ok("::1"));
+    assert_eq!(
+        TargetParser::validate_format("192.0.2.10:8443").as_deref(),
+        Ok("192.0.2.10:8443")
+    );
+
+    // Refusés : vide, trop long, caractères hors hostname, port invalide,
+    // deux-points multiples (IPv6 sans crochets avec port), collage sans point.
+    assert!(TargetParser::validate_format("").is_err());
+    assert!(TargetParser::validate_format("   ").is_err());
+    assert!(TargetParser::validate_format("ceci n est pas un domaine!!").is_err());
+    assert!(TargetParser::validate_format("notexample.com").is_ok()); // format valide
+    assert!(TargetParser::validate_format("host:99999").is_err()); // port > u16
+    assert!(TargetParser::validate_format("host:abc").is_err()); // port non numérique
+    assert!(TargetParser::validate_format("example.com:").is_err()); // port vide
+    assert!(TargetParser::validate_format("example.com:8080:9090").is_err()); // double suffixe
+    assert!(TargetParser::validate_format(&"a".repeat(254)).is_err()); // > 253
+}
+
+#[test]
 fn test_target_parser_accepts_all_ips_without_filter() {
     // Aucune restriction normative : loopback, RFC1918, multicast, link-local, doc ranges → tous acceptés.
     let any_ips = [
@@ -942,10 +973,17 @@ fn test_is_subdomain_point_boundary() {
     assert!(is_subdomain("www.example.com", "example.com"));
     assert!(is_subdomain("example.com", "example.com"));
     assert!(
-        !is_subdomain("evil.example.com", "example.com"),
-        "evil.example.com n'est PAS un sous-domaine"
+        is_subdomain("evil.example.com", "example.com"),
+        "evil.example.com EST un sous-domaine (frontiere de point respectee)"
     );
-    assert!(!is_subdomain("notexample.com", "example.com"));
+    assert!(
+        !is_subdomain("notexample.com", "example.com"),
+        "notexample.com n'est PAS un sous-domaine (aucune frontiere de point)"
+    );
+    assert!(
+        !is_subdomain("evilxexample.com", "example.com"),
+        "collage sans point : jamais un sous-domaine"
+    );
 }
 // ==============================================================================
 // 14. TESTS PERSISTANCE DB v0.3 — non-régression

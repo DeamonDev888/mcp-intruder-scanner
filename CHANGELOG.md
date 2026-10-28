@@ -4,6 +4,42 @@ Toutes les modifications notables de `mcp_intruder` sont documentées ici.
 
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.6.3] — 2026-10-28
+
+### Changed
+- **`litemcp` 0.7 → 0.9.0** : le serveur MCP tourne sur la version publiée le
+  2026-10-27 (gateway, verrou `on_request`, durcissements d'audit : résidu de
+  corps non cadré, fuite de timeout keep-alive, doublons d'en-têtes
+  d'identité, `default` schemars publié ET injecté). Aucune API utilisée du
+  crate n'a changé (prelude, `ServerBuilder`, `zod`, `ServerCore`).
+
+### Added
+- **Validation de format des cibles sans réseau** (`TargetParser::validate_format`) :
+  hostname/IP/hote:port normalisés (trim + minuscules), ports 0..=65535,
+  longueur 1..=253 — `resolve()` refactoré sur la même logique (un seul
+  endroit).
+- **12 audits rapides durcis** : toute cible malformée est refusée en
+  `invalid_input` (isError + `structuredContent.error`) AVANT la moindre
+  requête DNS/HTTP — avant, `dns_audit` & cie exécutaient le module sur une
+  cible n'importe quoi (résolutions silencieusement vides).
+- **`ping` en schéma strict vide** : le champ fantôme est refusé en -32602
+  par le schéma (avant : ignoré silencieusement).
+- **Tests de régression** : `validate_format` pur (normalisation, ports,
+  refus), `ping_rejects_unknown_arguments`,
+  `audit_rejects_malformed_target_before_network` — dispatch en mémoire,
+  sans socket ni PostgreSQL.
+- **Portabilité Windows de deux bins d'impact** (`envx`, `gitdump`) :
+  permissions 0600 derrière `#[cfg(unix)]` — le crate compile à nouveau sur
+  Windows (usage `std::os::unix` non gardé).
+
+### Fixed
+- `test_is_subdomain_point_boundary` : le test (et le doc-comment)
+  contredisaient l'implémentation et l'usage — `evil.example.com` EST un
+  sous-domaine de `example.com` (frontière de point) ; le contre-exemple
+  correct est `notexample.com`. L'audit l'utilise pour détecter les scripts
+  externes : le comportement du code (correct) est conservé et désormais
+  testé.
+
 ## [0.6.2] — 2026-10-26
 
 ### Changed

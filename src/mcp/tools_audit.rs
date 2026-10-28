@@ -27,7 +27,7 @@
 use litemcp::prelude::*;
 use serde_json::json;
 
-use super::{guarded, resolve_first_ip, to_json_clipped, ToolResult};
+use super::{guarded, resolve_first_ip, to_json_clipped, validated_target, ToolResult};
 use crate::modules::crt_sh::CrtShAuditor;
 use crate::modules::dns::DnsAuditor;
 use crate::modules::dns_hardening::DnsHardeningAuditor;
@@ -54,8 +54,9 @@ pub(super) fn register(builder: ServerBuilder) -> ServerBuilder {
              SPF et DMARC (strictesse), reverse PTR et problèmes détectés.",
             cible_schema(),
             |args: CibleArgs| -> ToolResult {
-                guarded("dns_audit", || {
-                    Ok(to_json_clipped(&DnsAuditor::audit(&args.target)))
+                let target = validated_target(&args.target)?;
+                guarded("dns_audit", move || {
+                    Ok(to_json_clipped(&DnsAuditor::audit(&target)))
                 })
             },
         )
@@ -77,9 +78,10 @@ pub(super) fn register(builder: ServerBuilder) -> ServerBuilder {
              SAN, protocoles TLS 1.0/1.1/1.2/1.3, auto-signature. Le port 443 est audité.",
             cible_schema(),
             |args: CibleArgs| -> ToolResult {
-                let ip = resolve_first_ip(&args.target)?;
+                let target = validated_target(&args.target)?;
+                let ip = resolve_first_ip(&target)?;
                 guarded("tls_audit", move || {
-                    Ok(to_json_clipped(&TlsAuditor::audit(&args.target, &ip)))
+                    Ok(to_json_clipped(&TlsAuditor::audit(&target, &ip)))
                 })
             },
         )
@@ -100,8 +102,9 @@ pub(super) fn register(builder: ServerBuilder) -> ServerBuilder {
              HttpOnly / SameSite), redirection vers HTTPS et score de configuration.",
             cible_schema(),
             |args: CibleArgs| -> ToolResult {
-                guarded("http_audit", || {
-                    Ok(to_json_clipped(&HttpAuditor::audit(&args.target, &[])))
+                let target = validated_target(&args.target)?;
+                guarded("http_audit", move || {
+                    Ok(to_json_clipped(&HttpAuditor::audit(&target, &[])))
                 })
             },
         )
@@ -122,8 +125,9 @@ pub(super) fn register(builder: ServerBuilder) -> ServerBuilder {
              protection de la vie privée et verrou de transfert (binaire `whois` requis).",
             cible_schema(),
             |args: CibleArgs| -> ToolResult {
-                guarded("whois_audit", || {
-                    Ok(to_json_clipped(&WhoisAuditor::audit(&args.target)))
+                let target = validated_target(&args.target)?;
+                guarded("whois_audit", move || {
+                    Ok(to_json_clipped(&WhoisAuditor::audit(&target)))
                 })
             },
         )
@@ -144,7 +148,8 @@ pub(super) fn register(builder: ServerBuilder) -> ServerBuilder {
              pays, région et ville (via whois). Accepte un domaine ou une IP directe.",
             cible_schema(),
             |args: CibleArgs| -> ToolResult {
-                let ip = resolve_first_ip(&args.target)?;
+                let target = validated_target(&args.target)?;
+                let ip = resolve_first_ip(&target)?;
                 guarded("geo_locate", move || {
                     Ok(to_json_clipped(&GeoAuditor::audit(&ip)))
                 })
@@ -169,10 +174,11 @@ pub(super) fn register(builder: ServerBuilder) -> ServerBuilder {
              7208), sélecteurs DKIM, MTA-STS, SMTP TLS Reporting, BIMI et tags DMARC avancés.",
             cible_schema(),
             |args: CibleArgs| -> ToolResult {
+                let target = validated_target(&args.target)?;
                 guarded("email_sec_audit", move || {
-                    let dns = DnsAuditor::audit(&args.target);
+                    let dns = DnsAuditor::audit(&target);
                     let res = EmailSecAuditor::audit(
-                        &args.target,
+                        &target,
                         dns.spf_record.as_deref(),
                         dns.dmarc_record.as_deref(),
                     );
@@ -197,8 +203,9 @@ pub(super) fn register(builder: ServerBuilder) -> ServerBuilder {
              statique), avec IP résolue et statut HTTP par hôte trouvé.",
             cible_schema(),
             |args: CibleArgs| -> ToolResult {
+                let target = validated_target(&args.target)?;
                 guarded("subdomains_audit", move || {
-                    let subs = SubdomainScanner::scan_with_mode(&args.target, ScanMode::Auto);
+                    let subs = SubdomainScanner::scan_with_mode(&target, ScanMode::Auto);
                     Ok(json!({ "count": subs.len(), "subdomains": subs }))
                 })
             },
@@ -220,8 +227,9 @@ pub(super) fn register(builder: ServerBuilder) -> ServerBuilder {
              hôtes invisibles pour subfinder mais présents dans les logs de certificats.",
             cible_schema(),
             |args: CibleArgs| -> ToolResult {
-                guarded("crt_sh_lookup", || {
-                    Ok(to_json_clipped(&CrtShAuditor::audit(&args.target)))
+                let target = validated_target(&args.target)?;
+                guarded("crt_sh_lookup", move || {
+                    Ok(to_json_clipped(&CrtShAuditor::audit(&target)))
                 })
             },
         )
@@ -242,8 +250,9 @@ pub(super) fn register(builder: ServerBuilder) -> ServerBuilder {
              fabricant, et ports edge avec challenge détectés (2083/2087/2096...).",
             cible_schema(),
             |args: CibleArgs| -> ToolResult {
-                guarded("waf_detect", || {
-                    Ok(to_json_clipped(&WafAuditor::audit(&args.target)))
+                let target = validated_target(&args.target)?;
+                guarded("waf_detect", move || {
+                    Ok(to_json_clipped(&WafAuditor::audit(&target)))
                 })
             },
         )
@@ -264,8 +273,9 @@ pub(super) fn register(builder: ServerBuilder) -> ServerBuilder {
              composants versionnés (verdicts EOL), en-tête Server et emails exposés.",
             cible_schema(),
             |args: CibleArgs| -> ToolResult {
-                guarded("tech_stack_audit", || {
-                    Ok(to_json_clipped(&TechStackAuditor::audit(&args.target, &[])))
+                let target = validated_target(&args.target)?;
+                guarded("tech_stack_audit", move || {
+                    Ok(to_json_clipped(&TechStackAuditor::audit(&target, &[])))
                 })
             },
         )
@@ -286,8 +296,9 @@ pub(super) fn register(builder: ServerBuilder) -> ServerBuilder {
              domaine (ftp./whm./autoconfig.), versions Bind et tentative de transfert de zone.",
             cible_schema(),
             |args: CibleArgs| -> ToolResult {
-                guarded("dnsrecon_audit", || {
-                    Ok(to_json_clipped(&DnsreconAuditor::audit(&args.target)))
+                let target = validated_target(&args.target)?;
+                guarded("dnsrecon_audit", move || {
+                    Ok(to_json_clipped(&DnsreconAuditor::audit(&target)))
                 })
             },
         )
@@ -309,11 +320,12 @@ pub(super) fn register(builder: ServerBuilder) -> ServerBuilder {
              refusée et transfert de zone (AXFR) refusé.",
             cible_schema(),
             |args: CibleArgs| -> ToolResult {
-                let ip = resolve_first_ip(&args.target)?;
+                let target = validated_target(&args.target)?;
+                let ip = resolve_first_ip(&target)?;
                 guarded("dns_hardening_audit", move || {
                     Ok(to_json_clipped(&DnsHardeningAuditor::audit(
                         &ip,
-                        &args.target,
+                        &target,
                     )))
                 })
             },
