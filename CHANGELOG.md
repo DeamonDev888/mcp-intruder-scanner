@@ -43,7 +43,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
   `CREATE TABLE audit_scans` echouait en erreur de syntaxe et le schema ne
   s'appliquait jamais sur une base vierge. Virgule repositionnee avant le
   commentaire.
-- **Fixture de test** : la purge des donnees avait substitue `evil-veridy.ca`
+- **Fixture de test** : la purge des donnees avait substitue `evil-exemple.ca`
   par `evil.example.com`, qui EST un sous-domaine valide de `example.com`
   (le point est la frontiere) — le test echouait a tort. Fixture restauree
   en `evil-example.com` (frere non-sous-domaine, forme tiret).

@@ -28,7 +28,7 @@ Streamable HTTP), `LICENSE` et `README.md`.
   `CREATE TABLE audit_scans` échouait en erreur de syntaxe et le schéma ne
   s'appliquait jamais sur une base vierge. Virgule repositionnée avant le
   commentaire.
-- **Fixture de test** — la purge des données avait substitué `evil-veridy.ca`
+- **Fixture de test** — la purge des données avait substitué `evil-exemple.ca`
   par `evil.example.com`, qui est un sous-domaine valide de `example.com` (le
   point est la frontière) : le test échouait à tort. Fixture restaurée en
   `evil-example.com`.
