@@ -20,7 +20,7 @@ env:
 
 jobs:
   build:
-    name: ${{ matrix.os }}
+    name: ${{ matrix.label }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -43,7 +43,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Rust (stable, toolchain cible)
+      - name: Install Rust (stable + toolchain cible)
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
@@ -59,11 +59,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ matrix.target }}-cargo-
 
-      - name: Install PostgreSQL (client pour les tests live optionnels)
-        uses: shogo82148/actions-setup-postgresql@v1
-        with:
-          postgresql-version: '16'
-
       - name: Clippy (-D warnings)
         run: cargo clippy --all-targets -- -D warnings
 
@@ -76,29 +71,40 @@ jobs:
       - name: Build release
         run: cargo build --release --bins
 
-      - name: Smoke test (--version + tools)
-        shell: bash
-        run: |
-          ./target/release/mcp_intruder --version
-          ./target/release/mcp_server --version
-
-      - name: Package (tar.gz + zip)
+      - name: Smoke test (les deux binaires repondent)
         shell: bash
         run: |
           set -euo pipefail
-          TAG="${{ inputs.tag || github.ref_name }}"
+          cargo run --release --quiet --bin mcp_intruder -- --version
+          cargo run --release --quiet --bin mcp_server -- --version
+
+      - name: Package (tar.gz)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
           PKG="mcp-intruder-${{ matrix.label }}"
           mkdir -p "dist/$PKG"
           cp target/release/mcp_intruder "dist/$PKG/"
           cp target/release/mcp_server "dist/$PKG/"
           cp LICENSE "dist/$PKG/" 2>/dev/null || true
           cp README.md "dist/$PKG/" 2>/dev/null || true
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            (cd dist && zip -r "$PKG.zip" "$PKG")
-          else
-            tar -C dist -czf "dist/$PKG.tar.gz" "$PKG"
-          fi
+          tar -C dist -czf "dist/$PKG.tar.gz" "$PKG"
           ls -la dist/
+
+      - name: Package (zip)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pkg = 'mcp-intruder-${{ matrix.label }}'
+          New-Item -ItemType Directory -Force -Path "dist/$pkg" | Out-Null
+          Copy-Item 'target/release/mcp_intruder.exe' "dist/$pkg/"
+          Copy-Item 'target/release/mcp_server.exe'  "dist/$pkg/"
+          Copy-Item 'LICENSE'   "dist/$pkg/" -ErrorAction SilentlyContinue
+          Copy-Item 'README.md' "dist/$pkg/" -ErrorAction SilentlyContinue
+          Compress-Archive -Path "dist/$pkg" -DestinationPath "dist/$pkg.zip"
+          Get-ChildItem dist
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
