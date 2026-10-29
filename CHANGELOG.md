@@ -4,6 +4,32 @@ Toutes les modifications notables de `mcp_intruder` sont documentées ici.
 
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.6.4] — 2026-10-29
+
+### Added
+- **Assistant de configuration** (`mcp-intruder-wizard`) : detecte la plateforme
+  hote et guide l'installation de l'outillage Kali quand le systeme n'est pas un
+  Kali natif. Deux modes :
+  - **graphique** (macOS, Windows, Linux avec bureau) : page unique servie sur
+    `127.0.0.1:8098`, diagnostic, installation du runtime de conteneur puis
+    telechargement de l'image Kali officielle, avec la commande exacte affichee
+    a chaque etape et un controle final de l'outillage.
+  - **headless** (`--headless`, pour un serveur Linux sans interface) : meme
+    logique dans le terminal, confirmation explicite avant toute action.
+- **Module `platform`** : detection de l'OS, de la distribution, de la presence
+  d'un runtime de conteneur (Docker ou Podman) et de l'image Kali locale.
+  Resolution d'outillage : binaire natif s'il existe, sinon execution dans le
+  conteneur `kalilinux/kali-rolling:latest` (verifie sur Docker Hub le
+  2026-10-29 : tag `latest`, architectures amd64/arm64/386/arm).
+- L'assistant n'installe jamais rien sans action explicite de l'utilisateur :
+  chaque etape bloquante affiche la commande a executer.
+
+### Changed
+- Les archives de release incluent desormais `wizard` et `dashboard` en plus
+  de `mcp_intruder` et `mcp_server`.
+- Runner macOS Intel du workflow de release : `macos-13` (retire du pool
+  public GitHub, jobs bloques en queue) -> `macos-14`.
+
 ## [0.6.3] — 2026-10-29
 
 ### Fixed

@@ -32,9 +32,11 @@ pub mod mcp;
 pub mod config;
 pub mod modules;
 pub mod orchestrator;
+pub mod platform;
 pub mod report;
 pub mod target_parser;
 pub mod utils;
+pub mod wizard;
 //
 // Organisation (ex-lib.rs monolithique de 900 lignes) :
 //   net.rs      — HttpResponse + http_get/http_get_headers (curl, timeout dur)
