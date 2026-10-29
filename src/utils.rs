@@ -277,3 +277,19 @@ pub fn split_host_port(hostport: &str) -> Option<(String, u16)> {
         Some((hostport.to_string(), 80))
     }
 }
+
+/// Ecrit un fichier de preuve avec des permissions restrictives (0600 sur Unix).
+/// Portable : sur Windows le mode POSIX n'existe pas, le fichier herite de l'ACL
+/// du repertoire temporaire de l'utilisateur (deja protege). Le chemin est
+/// fourni par l'appelant (std::env::temp_dir()).
+pub fn write_private_file(path: &std::path::Path, content: &str) -> std::io::Result<()> {
+    use std::io::Write;
+    let mut f = std::fs::File::create(path)?;
+    f.write_all(content.as_bytes())?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        f.set_permissions(std::fs::Permissions::from_mode(0o600))?;
+    }
+    Ok(())
+}

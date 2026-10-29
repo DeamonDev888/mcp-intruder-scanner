@@ -4,6 +4,30 @@ Toutes les modifications notables de `mcp_intruder` sont documentées ici.
 
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.6.3] — 2026-10-29
+
+### Fixed
+- **Portabilite Windows/macOS** : `envx` et `gitdump` utilisaient
+  `std::os::unix::fs::PermissionsExt` hors bloc `#[cfg(unix)]` et ecrivaient
+  en `/tmp/...` — le crate ne compilait pas sur Windows. Nouveau helper
+  portable `utils::write_private_file()` (mode 0600 sous Unix, ACL heritee
+  sous Windows) + chemin via `std::env::temp_dir()`.
+- **Schema canonique** : `schema_full.sql` plaçait la virgule de separation
+  de colonne APRES le commentaire inline, donc commentée par SQL — le
+  `CREATE TABLE audit_scans` echouait en erreur de syntaxe et le schema ne
+  s'appliquait jamais sur une base vierge. Virgule repositionnee avant le
+  commentaire.
+- **Fixture de test** : la purge des donnees avait substitue `evil-veridy.ca`
+  par `evil.example.com`, qui EST un sous-domaine valide de `example.com`
+  (le point est la frontiere) — le test echouait a tort. Fixture restauree
+  en `evil-example.com` (frere non-sous-domaine, forme tiret).
+
+### Added
+- **CI multi-OS** : `.github/workflows/ci.yml` (clippy `-D warnings`, fmt,
+  tests, build release sur Linux/macOS/Windows) et
+  `.github/workflows/release.yml` (build release + publication des binaires
+  Linux x86_64, macOS arm64/x86_64, Windows x86_64 sur tag `v*`).
+
 ## [0.6.2] — 2026-10-26
 
 ### Changed

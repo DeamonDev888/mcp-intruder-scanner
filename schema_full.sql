@@ -4,7 +4,7 @@ BEGIN;
 -- 1. Table principale de scan
 CREATE TABLE IF NOT EXISTS audit_scans (
     id BIGSERIAL PRIMARY KEY,
-    target VARCHAR(255) NOT NULL -- rétro-compat : longueur max cible raisonnable (un nom de domaine + sous-domaines),
+    target VARCHAR(255) NOT NULL, -- rétro-compat : longueur max cible raisonnable (un nom de domaine + sous-domaines)
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     overall_score SMALLINT NOT NULL,
     duration_seconds REAL DEFAULT 0.0,
