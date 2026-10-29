@@ -318,11 +318,12 @@ mod tests {
     fn flags_detectent_les_portals() {
         assert!(flags_for("paystub.grocer.example.com", "").contains(&"paystub".to_string()));
         assert!(flags_for("x.dev.grocer.example.com", "").contains(&"dev.".to_string()));
-        assert!(
-            flags_for("portailfournisseurdev.grocer.example.com", "<html>Portail</html>")
-                .iter()
-                .any(|f| f == "portail" || f == "dev")
-        );
+        assert!(flags_for(
+            "portailfournisseurdev.grocer.example.com",
+            "<html>Portail</html>"
+        )
+        .iter()
+        .any(|f| f == "portail" || f == "dev"));
         assert!(flags_for("banal.example.com", "rien d interessant ici").is_empty());
     }
 
