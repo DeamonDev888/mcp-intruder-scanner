@@ -157,6 +157,19 @@ pub fn run_tool_env(
     timeout_secs: u64,
     envs: &[(&str, &str)],
 ) -> Option<std::process::Output> {
+    // Hors Kali natif : si le binaire est absent du PATH mais qu'un runtime de
+    // conteneur est disponible, l'appel est delegue au conteneur Kali
+    // (kalilinux/kali-rolling + outillage installe au premier scan).
+    // Sur un Kali natif le chemin natif ci-dessous s'applique exactement comme
+    // avant : zero changement de comportement pour l'usage historique.
+    if crate::platform::which(bin).is_none() && std::env::var_os("MCP_INTRUDER_NO_DOCKER").is_none()
+    {
+        if let Some(out) = crate::docker_tools::run_tool_anywhere(bin, args, timeout_secs, envs) {
+            return Some(out);
+        }
+        // conteneur indisponible -> comportement historique (None par le
+        // Command::spawn ci-dessous), le module publiera son finding habituel.
+    }
     let mut cmd = std::process::Command::new(bin);
     cmd.args(args)
         .stdin(std::process::Stdio::null())

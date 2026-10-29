@@ -4,6 +4,19 @@ Toutes les modifications notables de `mcp_intruder` sont documentées ici.
 
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.6.5] — 2026-10-29
+
+### Added
+- **Execution automatique des outils Kali hors Kali natif** : chaque appel
+  d'outil externe (nmap, nuclei, nikto, wafw00f, whatweb, sslscan, ffuf,
+  dnsrecon, theHarvester...) verifie le PATH ; si le binaire est absent et
+  qu'un runtime de conteneur (Docker ou Podman) repond, l'appel est delegue
+  au conteneur officiel `kalilinux/kali-rolling` avec l'outillage installe
+  automatiquement au premier scan (une seule fois, puis cache par Docker).
+- Reseau partage avec l'hote et `/tmp` monte pour les preuves ;
+  `MCP_INTRUDER_NO_DOCKER=1` desactive le fallback.
+- Sur un Kali natif : **zero changement de comportement**.
+
 ## [0.6.4] — 2026-10-29
 
 ### Added
