@@ -30,6 +30,7 @@ pub mod mcp;
 /// Moteur de scan (ex-cible binaire main.rs, promue en lib v0.6.0 pour que
 /// le serveur MCP et le CLI partagent exactement le meme code).
 pub mod config;
+pub mod docker_tools;
 pub mod modules;
 pub mod orchestrator;
 pub mod platform;
