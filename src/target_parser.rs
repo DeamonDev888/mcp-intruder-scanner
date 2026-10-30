@@ -96,16 +96,14 @@ impl TargetParser {
                     }
                 }
                 if ips.is_empty() {
-                    TargetVerdict::Unresolvable(format!(
-                        "Aucune adresse IP résolue pour '{host}'"
-                    ))
+                    TargetVerdict::Unresolvable(format!("Aucune adresse IP résolue pour '{host}'"))
                 } else {
                     TargetVerdict::Resolved(ips)
                 }
             }
-            Err(e) => TargetVerdict::Unresolvable(format!(
-                "Échec de résolution DNS pour '{host}': {e}"
-            )),
+            Err(e) => {
+                TargetVerdict::Unresolvable(format!("Échec de résolution DNS pour '{host}': {e}"))
+            }
         }
     }
 }

@@ -323,10 +323,7 @@ pub(super) fn register(builder: ServerBuilder) -> ServerBuilder {
                 let target = validated_target(&args.target)?;
                 let ip = resolve_first_ip(&target)?;
                 guarded("dns_hardening_audit", move || {
-                    Ok(to_json_clipped(&DnsHardeningAuditor::audit(
-                        &ip,
-                        &target,
-                    )))
+                    Ok(to_json_clipped(&DnsHardeningAuditor::audit(&ip, &target)))
                 })
             },
         )

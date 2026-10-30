@@ -145,7 +145,8 @@ pub(crate) fn validated_target(target: &str) -> Result<String, ToolError> {
 /// meme contrat que main.rs (`TargetParser` -> premiere IP -> orchestrateur).
 /// Toute cible invalide ou injoignable devient une erreur lisible par le
 /// client MCP — jamais de panic.
-pub(crate) fn resolve_first_ip(target: &str) -> Result<String, ToolError> {    match TargetParser::resolve(target) {
+pub(crate) fn resolve_first_ip(target: &str) -> Result<String, ToolError> {
+    match TargetParser::resolve(target) {
         TargetVerdict::Resolved(ips) => ips
             .first()
             .map(std::string::ToString::to_string)

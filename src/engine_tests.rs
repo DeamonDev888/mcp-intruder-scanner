@@ -107,7 +107,10 @@ fn test_validate_format_pure_no_network() {
         TargetParser::validate_format("Example.COM:8080").as_deref(),
         Ok("example.com:8080")
     );
-    assert_eq!(TargetParser::validate_format("127.0.0.1").as_deref(), Ok("127.0.0.1"));
+    assert_eq!(
+        TargetParser::validate_format("127.0.0.1").as_deref(),
+        Ok("127.0.0.1")
+    );
     assert_eq!(TargetParser::validate_format("::1").as_deref(), Ok("::1"));
     assert_eq!(
         TargetParser::validate_format("192.0.2.10:8443").as_deref(),
@@ -1293,7 +1296,10 @@ fn test_host_with_port_custom_port() {
         crate::utils::host_with_port("127.0.0.1", &[8099]),
         "127.0.0.1:8099"
     );
-    assert_eq!(crate::utils::host_with_port("example.com", &[]), "example.com");
+    assert_eq!(
+        crate::utils::host_with_port("example.com", &[]),
+        "example.com"
+    );
     assert_eq!(
         crate::utils::host_with_port("example.com", &[443, 8443]),
         "example.com:443"
@@ -1729,9 +1735,18 @@ fn test_lock_dnsrecon_host_records_fusion_dedup() {
     // l'IP d'un hote existant n'est JAMAIS ecrasee.
     use crate::modules::subdomains::SubdomainResult;
     let host_records = vec![
-        ("ftp.bank8.example.com".to_string(), "106.0.62.71".to_string()),
-        ("whm.bank8.example.com".to_string(), "106.0.62.71".to_string()),
-        ("www.bank8.example.com".to_string(), "106.0.62.71".to_string()),
+        (
+            "ftp.bank8.example.com".to_string(),
+            "106.0.62.71".to_string(),
+        ),
+        (
+            "whm.bank8.example.com".to_string(),
+            "106.0.62.71".to_string(),
+        ),
+        (
+            "www.bank8.example.com".to_string(),
+            "106.0.62.71".to_string(),
+        ),
     ];
     let mut subs = vec![SubdomainResult {
         subdomain: "www.bank8.example.com".into(),
@@ -1769,11 +1784,8 @@ fn test_lock_dnsrecon_host_records_fusion_dedup() {
         "IP existante preservee"
     );
     assert!(www.is_alive, "donnees vivantes preservees");
-    assert!(
-        subs.iter()
-            .any(|s| s.subdomain == "ftp.bank8.example.com"
-                && s.ip_address.as_deref() == Some("106.0.62.71"))
-    );
+    assert!(subs.iter().any(|s| s.subdomain == "ftp.bank8.example.com"
+        && s.ip_address.as_deref() == Some("106.0.62.71")));
 }
 
 #[test]
