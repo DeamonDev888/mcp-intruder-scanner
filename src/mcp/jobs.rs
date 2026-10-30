@@ -1731,6 +1731,10 @@ mod tests {
                 "outil manquant : {attendu} (présents : {names:?})"
             );
         }
-        assert_eq!(names.len(), 21, "21 outils attendus, trouvés : {names:?}");
+        assert_eq!(
+            names.len(),
+            24,
+            "24 outils attendus (21 historiques + 3 skills), trouvés : {names:?}"
+        );
     }
 }

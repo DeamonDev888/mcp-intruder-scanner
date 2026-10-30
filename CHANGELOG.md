@@ -4,6 +4,27 @@ Toutes les modifications notables de `mcp_intruder` sont documentées ici.
 
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.6.6] — 2026-10-29
+
+### Added
+- **Integration du bundle de skills au serveur MCP** : les 340 skills du repo
+  public mcp-intruder-skills (bughunter 45 Tier 1, acs 94 Tier 1, 201 optionnels
+  en 5 packs) sont indexes et exposes via 3 nouveaux outils MCP en lecture seule :
+  - `skills_catalog` : total, repartitions par source et par tier, packs optionnels
+  - `skills_search` : recherche plein-texte ET-logique (id, description, categorie)
+  - `skills_show` : lecture du SKILL.md complet par id
+- Localisation automatique du bundle (`MCP_INTRUDER_SKILLS_DIR`, cwd, home,
+  voisin du binaire) ; les outils repondent proprement si le bundle est absent.
+- Nouveau module `skills` : index memoire du manifest machine
+  (skills-manifest.json), cache par process.
+
+### Fixed
+- `skills_show` : le champ `path` du manifest pointe vers le dossier du skill,
+  pas vers le fichier — `SKILL.md` est ajoute si necessaire.
+
+### Changed
+- `tools/list` expose desormais 24 outils (21 historiques + 3 skills).
+
 ## [0.6.5] — 2026-10-29
 
 ### Added

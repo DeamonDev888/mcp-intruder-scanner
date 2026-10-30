@@ -35,6 +35,7 @@ pub mod modules;
 pub mod orchestrator;
 pub mod platform;
 pub mod report;
+pub mod skills;
 pub mod target_parser;
 pub mod utils;
 pub mod wizard;
