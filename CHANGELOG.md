@@ -4,6 +4,17 @@ Toutes les modifications notables de `mcp_intruder` sont documentées ici.
 
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.6.7] — 2026-10-29
+
+### Changed
+- README et banner LiteMCP alignes sur le contenu reel : 24 outils MCP
+  (scan/audit 16, jobs 5, skills 3), 340 skills du bundle
+  mcp-intruder-skills avec leur repartition verifiee (bughunter 83,
+  acs 257, 201 optionnels en 5 packs), execution des outils avec
+  auto-detection d'environnement (natif / conteneur kalilinux/kali-rolling),
+  installation multi-OS (crates.io + archives GitHub releases embarquant
+  mcp_intruder, mcp_server, wizard, dashboard).
+
 ## [0.6.6] — 2026-10-29
 
 ### Added

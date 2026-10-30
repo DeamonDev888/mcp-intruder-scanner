@@ -1,6 +1,6 @@
 [package]
 name = "mcp_intruder"
-version = "0.6.6"
+version = "0.6.7"
 edition = "2021"
 authors = ["DeamonDev888 <DeamonDev888@users.noreply.github.com>"]
 description = "MCP Intruder — serveur Model Context Protocol offensif : expose le moteur de scan de surface (DNS, ports, TLS, HTTP, 39 modules lecture-seule) comme outils MCP (Streamable HTTP, litemcp) + catalogue PostgreSQL"
