@@ -312,13 +312,19 @@ ni l'un ni l'autre      ──► finding "outil absent" (comportement historiqu
 ```bash
 # Linux / macOS / Windows (WSL) : via crates.io
 cargo install mcp_intruder
-
-# ou binaires pré-compilés (GitHub Releases) :
-#   mcp-intruder-linux-x86_64.tar.gz · mcp-intruder-macos-arm64.tar.gz
-#   mcp-intruder-macos-x86_64.tar.gz · mcp-intruder-windows-x86_64.zip
-# Chaque archive embarque : mcp_intruder (CLI), mcp_server (MCP),
-# wizard (assistant de configuration GUI/headless), dashboard (interface web).
 ```
+
+**Ou téléchargez les binaires pré-compilés** — chaque archive embarque
+`mcp_intruder` (CLI), `mcp_server` (MCP), `wizard` et `dashboard` :
+
+| Plateforme | Archive |
+|---|---|
+| Linux x86_64 | [mcp-intruder-linux-x86_64.tar.gz](https://github.com/DeamonDev888/mcp-intruder-scanner/releases/latest/download/mcp-intruder-linux-x86_64.tar.gz) |
+| macOS Apple Silicon | [mcp-intruder-macos-arm64.tar.gz](https://github.com/DeamonDev888/mcp-intruder-scanner/releases/latest/download/mcp-intruder-macos-arm64.tar.gz) |
+| macOS Intel | [mcp-intruder-macos-x86_64.tar.gz](https://github.com/DeamonDev888/mcp-intruder-scanner/releases/latest/download/mcp-intruder-macos-x86_64.tar.gz) |
+| Windows x86_64 | [mcp-intruder-windows-x86_64.zip](https://github.com/DeamonDev888/mcp-intruder-scanner/releases/latest/download/mcp-intruder-windows-x86_64.zip) |
+
+> Toutes les versions : <https://github.com/DeamonDev888/mcp-intruder-scanner/releases>
 
 Sur un hôte non-Kali, lancez l'assistant (GUI : `mcp-intruder-wizard`,
 headless : `mcp-intruder-wizard --headless`) ou laissez le fallback Docker

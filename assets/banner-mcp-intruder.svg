@@ -126,7 +126,7 @@
     <circle cx="54" cy="30" r="6" fill="#ffd75f"/>
     <circle cx="78" cy="30" r="6" fill="#2ecc71"/>
     <text x="104" y="36" font-family="monospace" font-size="16" fill="#8a90a8">mcp-intruder</text>
-    <text x="238" y="36" font-family="monospace" font-size="16" fill="#f5f6fa">mcp_server --bind 127.0.0.1:7808 --db mcp_intruder_audit</text>
+    <text x="238" y="36" font-family="monospace" font-size="16" fill="#f5f6fa">cargo install mcp_intruder</text>
     <text x="1756" y="36" text-anchor="end" font-family="monospace" font-size="16" fill="#2ecc71" font-weight="bold">PLAN DE CONTROLE ACTIF</text>
   </g>
 </svg>

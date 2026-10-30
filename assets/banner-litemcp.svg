@@ -38,7 +38,7 @@
   <line x1="70" y1="62" x2="1850" y2="62" stroke="#232637" stroke-width="1"/>
 
   <!-- title -->
-  <text x="70" y="230" font-family="'Segoe UI', Arial, sans-serif" font-size="120" font-weight="800" fill="url(#litemcpGrad)" filter="url(#glow2)">litemcp</text>
+  <text x="70" y="230" font-family="'Segoe UI', Arial, sans-serif" font-size="120" font-weight="800" fill="#2ecc71" filter="url(#glow2)">litemcp</text>
   <text x="72" y="292" font-family="monospace" font-size="23" fill="#8a90a8" letter-spacing="3">LE MOTEUR OFFENSIF EXPOSE AUX AGENTS IA VIA LE PROTOCOLE MCP</text>
   <text x="72" y="336" font-family="monospace" font-size="19" fill="#5a6078">POST /mcp  ·  GET /health  ·  bind 127.0.0.1:7808  ·  zero runtime async  ·  serde uniquement</text>
 
