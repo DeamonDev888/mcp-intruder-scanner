@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 800" width="1920" height="800" role="img" aria-label="MCP Intruder x LiteMCP - 24 outils MCP, 340 skills, 39 modules de scan">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 800" width="1920" height="800" role="img" aria-label="LiteMCP - 24 outils MCP, 340 skills, 39 modules de scan">
   <defs>
     <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#07080e"/>
@@ -38,9 +38,7 @@
   <line x1="70" y1="62" x2="1850" y2="62" stroke="#232637" stroke-width="1"/>
 
   <!-- title -->
-  <text x="70" y="230" font-family="'Segoe UI', Arial, sans-serif" font-size="120" font-weight="800" fill="#f5f6fa">mcp</text>
-  <text x="345" y="230" font-family="'Segoe UI', Arial, sans-serif" font-size="120" font-weight="300" fill="#3a3f55">×</text>
-  <text x="450" y="230" font-family="'Segoe UI', Arial, sans-serif" font-size="120" font-weight="800" fill="url(#litemcpGrad)" filter="url(#glow2)">litemcp</text>
+  <text x="70" y="230" font-family="'Segoe UI', Arial, sans-serif" font-size="120" font-weight="800" fill="url(#litemcpGrad)" filter="url(#glow2)">litemcp</text>
   <text x="72" y="292" font-family="monospace" font-size="23" fill="#8a90a8" letter-spacing="3">LE MOTEUR OFFENSIF EXPOSE AUX AGENTS IA VIA LE PROTOCOLE MCP</text>
   <text x="72" y="336" font-family="monospace" font-size="19" fill="#5a6078">POST /mcp  ·  GET /health  ·  bind 127.0.0.1:7808  ·  zero runtime async  ·  serde uniquement</text>
 
@@ -105,7 +103,7 @@
     <text x="590" y="27" font-family="monospace" font-size="15" fill="#8a90a8">crates.io/crates/</text>
     <text x="760" y="27" font-family="monospace" font-size="15" fill="#f5f6fa">mcp_intruder</text>
     <text x="920" y="27" font-family="monospace" font-size="15" fill="#5a6078">·</text>
-    <text x="940" y="27" font-family="monospace" font-size="15" fill="#00e5ff">v0.6.6</text>
+    <text x="940" y="27" font-family="monospace" font-size="15" fill="#00e5ff">v0.6.7</text>
     <text x="1756" y="27" text-anchor="end" font-family="monospace" font-size="15" fill="#2ecc71" font-weight="bold">24 OUTILS · 340 SKILLS</text>
   </g>
 </svg>
