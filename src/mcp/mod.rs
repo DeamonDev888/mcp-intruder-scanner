@@ -37,6 +37,7 @@ mod jobs;
 mod tools_audit;
 mod tools_catalog;
 mod tools_scan;
+mod tools_skills;
 
 use std::time::Duration;
 
@@ -103,6 +104,7 @@ pub fn build_server_with_db(db_name: &str) -> ServerBuilder {
     let builder = tools_scan::register(builder, &db);
     let builder = tools_audit::register(builder);
     let builder = tools_catalog::register(builder);
+    let builder = tools_skills::register(builder);
     // Plan de controle jobs : soumission/observation/arrêt d'exécutions
     // longues en arrière-plan (kind=scan, module, bin, diag) — porte le
     // total du serveur à 21 outils.
