@@ -6,7 +6,8 @@
   <img src="https://img.shields.io/badge/Language-Rust%202021-orange?style=for-the-badge&logo=rust" alt="Rust">
   <img src="https://img.shields.io/badge/Platform-Kali%20Linux%20Rolling-blue?style=for-the-badge&logo=kali-linux" alt="Kali Linux">
   <img src="https://img.shields.io/badge/Database-PostgreSQL%2018--Tables-336791?style=for-the-badge&logo=postgresql" alt="PostgreSQL">
-  <img src="https://img.shields.io/badge/Modules-24--Offensive-red?style=for-the-badge" alt="24 modules offensifs">
+  <img src="https://img.shields.io/badge/MCP-24--Outils-red?style=for-the-badge" alt="24 outils MCP">
+  <img src="https://img.shields.io/badge/Skills-340--Bundle-green?style=for-the-badge" alt="340 skills">
   <img src="https://img.shields.io/badge/Output-JSON%20Ready%20%7C%20TUI-cyan?style=for-the-badge" alt="CLI & JSON">
 </p>
 
@@ -229,7 +230,7 @@ cargo clippy --all-targets -- -D warnings  # strict : 0 warning obligatoire
 
 ---
 
-## 🧩 18 modules d'impact intégrés (même crate depuis v0.5.0)
+## 🧩 21 bins d'impact intégrés (même crate depuis v0.5.0)
 
 > Depuis la v0.5.0, les modules d'impact font **partie de `mcp_intruder`** (la crate d'impact historique a été yankée sur crates.io — un seul crate, un seul `cargo install`).
 
@@ -284,7 +285,44 @@ propulsé par [LiteMCP](https://github.com/DeamonDev888/litemcp) — la lib MCP 
 
 - **Transport** : Streamable HTTP — `POST /mcp`, bind par défaut `127.0.0.1:7808`
 - **Santé** : endpoint `GET /health`
-- **21 outils** : `ping`, `scan_target`, `scan_history`, `tools_diag`, `dns_audit`, `tls_audit`, `http_audit`, `whois_audit`, `geo_locate`, `email_sec_audit`, `subdomains_audit`, `crt_sh_lookup`, `waf_detect`, `tech_stack_audit`, `dnsrecon_audit`, `dns_hardening_audit`, `job_start`, `job_status`, `job_result`, `job_stop`, `job_list`
+- **24 outils** :
+  - **Scan & audit (16)** : `scan_target`, `scan_history`, `tools_diag`, `dns_audit`, `tls_audit`, `http_audit`, `whois_audit`, `geo_locate`, `email_sec_audit`, `subdomains_audit`, `crt_sh_lookup`, `waf_detect`, `tech_stack_audit`, `dnsrecon_audit`, `dns_hardening_audit`, `ping`
+  - **Jobs asynchrones (5)** : `job_start`, `job_status`, `job_result`, `job_stop`, `job_list`
+  - **Skills (3)** : `skills_catalog`, `skills_search`, `skills_show` — les **340 skills** du bundle [mcp-intruder-skills](https://github.com/DeamonDev888/mcp-intruder-skills) (bughunter 83, acs 257, 201 optionnels en 5 packs) recherchés en plein-texte et lus intégralement via MCP
+
+### Exécution des outils : auto-détection d'environnement
+
+Chaque appel d'outil externe (nmap, nuclei, nikto, wafw00f, whatweb, sslscan, ffuf,
+dnsrecon, theHarvester, smbclient...) passe par un unique point d'entrée :
+
+```
+binaire dans le PATH ?  ──► exécution native (Kali natif : zéro changement)
+runtime Docker/Podman ? ──► conteneur officiel kalilinux/kali-rolling :
+                             image tirée et outillage installé AUTOMATIQUEMENT
+                             au premier scan (une seule fois, puis caché)
+ni l'un ni l'autre      ──► finding "outil absent" (comportement historique)
+```
+
+- Réseau partagé avec l'hôte, `/tmp` monté pour les preuves
+- `MCP_INTRUDER_NO_DOCKER=1` désactive le fallback
+- Sur un Kali natif : **aucun changement de comportement**
+
+### Installation multi-OS
+
+```bash
+# Linux / macOS / Windows (WSL) : via crates.io
+cargo install mcp_intruder
+
+# ou binaires pré-compilés (GitHub Releases) :
+#   mcp-intruder-linux-x86_64.tar.gz · mcp-intruder-macos-arm64.tar.gz
+#   mcp-intruder-macos-x86_64.tar.gz · mcp-intruder-windows-x86_64.zip
+# Chaque archive embarque : mcp_intruder (CLI), mcp_server (MCP),
+# wizard (assistant de configuration GUI/headless), dashboard (interface web).
+```
+
+Sur un hôte non-Kali, lancez l'assistant (GUI : `mcp-intruder-wizard`,
+headless : `mcp-intruder-wizard --headless`) ou laissez le fallback Docker
+installer l'outillage au premier scan.
 
 ### Pilotage avancé (jobs)
 
