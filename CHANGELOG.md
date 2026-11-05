@@ -4,6 +4,25 @@ Toutes les modifications notables de `mcp_intruder` sont documentées ici.
 
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.6.9] — 2026-11-05
+
+### Fixed
+- **Image conteneur : l'installation des outils n'était pas persistée.** Le bootstrap
+  tournait dans un conteneur `--rm` puis se contentait de taguer l'image **de base** :
+  l'image dite « prête » ne contenait aucun outil, et `image_ready` testait la base au
+  lieu de l'image dérivée (donc plus aucune installation après le premier pull). Le
+  bootstrap utilise désormais un conteneur persistant, vérifie son code de sortie réel
+  (`docker inspect .State.ExitCode`) puis le `commit` en `mcp-intruder/kali-tools:latest`.
+
+### Changed
+- **Outillage conteneur complet** : `rustscan`, `sqlmap`, `subfinder`, `httpx-toolkit` et
+  `nuclei` rejoignent les 15 paquets existants (20 au total). Les quatre « dépendances
+  optionnelles » du README n'ont plus d'installation manuelle à faire en mode conteneur.
+- `pdhttpx` / `httpx` sont résolus vers le paquet `httpx-toolkit` dans le conteneur
+  (évite la collision avec le script Python `httpx`).
+- README : section « Dépendances Optionnelles » remplacée par « Outillage externe
+  (installé automatiquement) », avec les trois niveaux de résolution.
+
 ## [0.6.8] — 2026-11-05
 
 ### Changed

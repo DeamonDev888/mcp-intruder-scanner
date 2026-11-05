@@ -41,6 +41,11 @@ pub const TOOL_PACKAGES: &[&str] = &[
     "openssl",
     "netcat-openbsd",
     "theharvester",
+    "rustscan",
+    "sqlmap",
+    "subfinder",
+    "httpx-toolkit",
+    "nuclei",
 ];
 
 /// Cache du nom du runtime detecte ("docker" ou "podman"), evite de re-scan
@@ -77,8 +82,18 @@ pub fn detect_runtime() -> Option<&'static str> {
         .as_deref()
 }
 
-/// L'image derivee existe-t-elle deja localement ?
+/// Tag local de l'image derivee : base Kali + outillage installe.
+pub const DERIVED_IMAGE: &str = "mcp-intruder/kali-tools:latest";
+
+/// L'image derivee (outillage inclus) est-elle deja construite ?
 fn image_ready(runtime: &str) -> bool {
+    crate::platform::run_capture(runtime, &["images", "-q", DERIVED_IMAGE])
+        .map(|o| !o.trim().is_empty())
+        .unwrap_or(false)
+}
+
+/// L'image de base Kali est-elle deja tiree ?
+fn base_ready(runtime: &str) -> bool {
     crate::platform::run_capture(runtime, &["images", "-q", KALI_IMAGE])
         .map(|o| !o.trim().is_empty())
         .unwrap_or(false)
@@ -92,56 +107,62 @@ fn ensure_image(runtime: &str) -> bool {
     if image_ready(runtime) {
         return true;
     }
-    eprintln!(
-        "[docker-tools] premiere utilisation : telechargement de {KALI_IMAGE} + installation des outils Kali (2-5 min, une seule fois)..."
+
+    // 1. pull de l'image officielle si elle manque
+    if !base_ready(runtime) {
+        eprintln!("[docker-tools] premiere utilisation : telechargement de {KALI_IMAGE} ...");
+        let _ = crate::platform::run_capture(runtime, &["pull", KALI_IMAGE]);
+        if !base_ready(runtime) {
+            eprintln!("[docker-tools] echec du pull de l'image");
+            return false;
+        }
+    }
+
+    // 2. installation dans un conteneur PERSISTANT : il doit survivre a la fin
+    //    de l'installation pour etre commite. Avec `--rm`, les paquets seraient
+    //    perdus et l'image "prete" ne serait que l'image de base.
+    let container = format!("mcp-intruder-bootstrap-{}", std::process::id());
+    let _ = crate::platform::run_capture(runtime, &["rm", "-f", container.as_str()]);
+    eprintln!("[docker-tools] installation des outils Kali (2-5 min, une seule fois)...");
+    let script = format!(
+        "apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq {} && apt-get clean",
+        TOOL_PACKAGES.join(" ")
+    );
+    let _ = crate::platform::run_capture(
+        runtime,
+        &[
+            "run",
+            "--name",
+            container.as_str(),
+            KALI_IMAGE,
+            "sh",
+            "-c",
+            script.as_str(),
+        ],
     );
 
-    // 1. pull de l'image officielle
-    let pulled = crate::platform::run_capture(runtime, &["pull", KALI_IMAGE]);
-    if !pulled
-        .map(|o| o.contains("Status") || !o.trim().is_empty())
-        .unwrap_or(false)
-        && !image_ready_after_pull(runtime)
-    {
-        eprintln!("[docker-tools] echec du pull de l'image");
+    // 3. code de sortie reel du conteneur d'installation
+    let exit_code = crate::platform::run_capture(
+        runtime,
+        &["inspect", "-f", "{{.State.ExitCode}}", container.as_str()],
+    )
+    .map(|s| s.trim().to_string())
+    .unwrap_or_default();
+    if exit_code != "0" {
+        eprintln!("[docker-tools] echec de l'installation des paquets (exit {exit_code})");
+        let _ = crate::platform::run_capture(runtime, &["rm", "-f", container.as_str()]);
         return false;
     }
 
-    // 2. installation des paquets dans un conteneur jetable -> commit en image
-    let mut commit_args: Vec<String> = vec!["run".into(), "--rm".into(), KALI_IMAGE.into()];
-    commit_args.extend([
-        "sh".into(), "-c".into(),
-        format!(
-            "apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq {} && apt-get clean",
-            TOOL_PACKAGES.join(" ")
-        ),
-    ]);
-    let args_ref: Vec<&str> = commit_args.iter().map(|s| s.as_str()).collect();
-    let install_out = crate::platform::run_capture(runtime, &args_ref);
-    let install_ok = install_out
-        .as_deref()
-        .map(|o| !o.contains("E: Unable to locate") && !o.contains("E: Unable to fetch"))
-        .unwrap_or(false);
-
-    if !install_ok {
-        eprintln!("[docker-tools] echec de l'installation des paquets dans le conteneur");
+    // 4. commit en image derivee, puis nettoyage du conteneur
+    let _ = crate::platform::run_capture(runtime, &["commit", container.as_str(), DERIVED_IMAGE]);
+    let _ = crate::platform::run_capture(runtime, &["rm", "-f", container.as_str()]);
+    if !image_ready(runtime) {
+        eprintln!("[docker-tools] echec du commit de l'image derivee");
         return false;
     }
-
-    // 3. commit : le conteneur est deja termine (--rm), on re-creer l'image
-    //    configuree en rejouant l'installation dans une nouvelle couche via
-    //    docker commit d'un conteneur persistant le temps de l'operation.
-    //    Simplification : on marque l'image de base comme prete en creant un
-    //    tag local dedie.
-    let tag_args = ["tag", KALI_IMAGE, "mcp-intruder/kali-tools:latest"];
-    let _ = crate::platform::run_capture(runtime, &tag_args);
-    eprintln!("[docker-tools] image prete : mcp-intruder/kali-tools:latest");
+    eprintln!("[docker-tools] image prete : {DERIVED_IMAGE}");
     true
-}
-
-/// Verification post-pull (helper de lisibilite).
-fn image_ready_after_pull(runtime: &str) -> bool {
-    image_ready(runtime)
 }
 
 /// Construit la commande conteneurisee equivalente a `tool args...`.
@@ -160,7 +181,7 @@ fn container_cmd(runtime: &str, tool: &str, args: &[&str]) -> Vec<String> {
         "/tmp:/tmp".into(),
         "-e".into(),
         "DEBIAN_FRONTEND=noninteractive".into(),
-        "mcp-intruder/kali-tools:latest".into(),
+        DERIVED_IMAGE.into(),
     ];
     cmd.push(resolve_in_container(tool).to_string());
     cmd.extend(args.iter().map(|s| s.to_string()));
@@ -170,9 +191,14 @@ fn container_cmd(runtime: &str, tool: &str, args: &[&str]) -> Vec<String> {
 /// Chemin de l'outil dans le conteneur. La plupart sont dans /usr/bin ou
 /// /usr/sbin ; on tente /usr/bin d'abord (PATH du conteneur couvre les deux).
 fn resolve_in_container(tool: &str) -> String {
-    // les outils Kali installables par apt sont tous accessibles par leur nom
-    // via le PATH du conteneur : pas besoin de chemin absolu.
-    tool.to_string()
+    // Les outils Kali installables par apt sont accessibles par leur nom via le
+    // PATH du conteneur. Exception : le paquet ProjectDiscovery httpx s'appelle
+    // `httpx-toolkit` (pour ne pas entrer en collision avec le script Python
+    // `httpx` publie sur PyPI).
+    match tool {
+        "pdhttpx" | "httpx" => "httpx-toolkit".to_string(),
+        _ => tool.to_string(),
+    }
 }
 
 /// API publique : execute `tool args...` nativement si possible, sinon dans le
@@ -268,9 +294,33 @@ mod tests {
 
     #[test]
     fn paquets_essentiels_couverts() {
-        for t in ["nmap", "nikto", "sslscan", "ffuf", "dnsrecon"] {
+        // le socle historique + les outils autrefois "optionnels" (0.6.9)
+        for t in [
+            "nmap",
+            "nikto",
+            "sslscan",
+            "ffuf",
+            "dnsrecon",
+            "rustscan",
+            "sqlmap",
+            "subfinder",
+            "httpx-toolkit",
+            "nuclei",
+        ] {
             assert!(TOOL_PACKAGES.contains(&t), "paquet manquant : {t}");
         }
+    }
+
+    #[test]
+    fn image_derivee_distincte_de_la_base() {
+        assert_eq!(DERIVED_IMAGE, "mcp-intruder/kali-tools:latest");
+        assert_ne!(DERIVED_IMAGE, KALI_IMAGE);
+    }
+
+    #[test]
+    fn httpx_projectediscovery_est_remappe() {
+        assert_eq!(resolve_in_container("pdhttpx"), "httpx-toolkit");
+        assert_eq!(resolve_in_container("httpx"), "httpx-toolkit");
     }
 
     #[test]

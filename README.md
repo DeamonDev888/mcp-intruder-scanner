@@ -285,23 +285,37 @@ sudo -u postgres psql -f init_role.sql     # rôle propriétaire
 mcp_intruder tools   # diagnostique les binaires + SecLists + PostgreSQL
 ```
 
-### Dépendances Optionnelles (modules avancés)
+### Outillage externe (installé automatiquement)
 
-| Outil | Module qui l'utilise | Installation manuelle si absente |
-|---|---|---|
-| `pdhttpx` | HTTPx (probe HTTP massif) | Téléchargé par le script d'installation ou `curl -sL https://github.com/projectdiscovery/httpx/releases/download/v1.6.9/httpx_1.6.9_linux_amd64.zip \| sudo install -m 0755 /dev/stdin /usr/local/bin/pdhttpx` |
-| `subfinder` | Sous-domaines (auto) | Téléchargé par le script d'installation ou binaire pré-compilé depuis GitHub releases |
-| `rustscan` | Scan 65535 ports | `sudo apt install rustscan` |
-| `sqlmap` | Injection SQL | `sudo apt install sqlmap` |
+> `cargo install mcp_intruder` installe le **moteur**, pas les outils Kali/ProjectDiscovery :
+> ce sont des binaires externes (Go, Python, Rust), pas des crates — et Cargo n'a aucun
+> hook post-installation. Ils ne sont pas pour autant « optionnels » : le scanner les
+> provisionne lui-même au premier scan.
+
+| Niveau | Comportement |
+|---|---|
+| **1. Natif** | le binaire est dans le `PATH` → exécution directe |
+| **2. Conteneur** | sinon, image dérivée `mcp-intruder/kali-tools` construite au **premier scan** (pull `kalilinux/kali-rolling` + `apt-get install`, une seule fois, hôte intact) → l'outil tourne dedans |
+| **3. Sinon** | finding explicite « outil absent » — jamais de résultat silencieusement vide |
+
+Paquets provisionnés dans l'image (20) : `nmap`, `nikto`, `sslscan`, `wafw00f`, `whatweb`,
+`ffuf`, `dnsrecon`, `dnsutils`, `whois`, `theharvester`, `rustscan`, `sqlmap`, `subfinder`,
+`httpx-toolkit`, `nuclei`, `curl`, `git`, `openssl`, `python3`, `netcat-openbsd`.
+
+Les quatre outils qui demandaient une installation manuelle en 0.6.8 (`rustscan`, `sqlmap`,
+`subfinder`, `pdhttpx`) sont désormais couverts par l'étape 2. Pour un usage **natif** sans
+conteneur, l'équivalent reste : `sudo apt install rustscan sqlmap subfinder httpx-toolkit nuclei`.
 
 > [!WARNING]
-> **httpx** (le nom seul) sur Kali est le script Python `encode/httpx`, **PAS** ProjectDiscovery. Le scanner détecte cela et télécharge `pdhttpx` automatiquement. Ne cherchez pas à installer `httpx` via apt.
+> **httpx** (le nom seul) sur Kali est le script Python `encode/httpx`, **PAS** ProjectDiscovery.
+> Le scanner détecte cela, utilise le paquet `httpx-toolkit` dans le conteneur, et télécharge
+> `pdhttpx` en natif si nécessaire. Ne cherchez pas à installer `httpx` via apt.
 
 ---
 
 ## 🧪 Tests & Qualité
 
-- **209 tests unitaires** : `cargo test` (0 failed) — dont une vingtaine d'anti-régression qui verrouillent les invariants critiques (score clamp, bind params, pas de sh -c, exclusions lab chainx, etc.)
+- **211 tests unitaires** : `cargo test` (0 failed) — dont une vingtaine d'anti-régression qui verrouillent les invariants critiques (score clamp, bind params, pas de sh -c, exclusions lab chainx, etc.)
 - **Clippy strict** : `cargo clippy --all-targets -- -D warnings` (0 warning)
 - **Lint format** : `cargo fmt --check`
 - **Build release** : 4.7 MB, optimisé LTO
