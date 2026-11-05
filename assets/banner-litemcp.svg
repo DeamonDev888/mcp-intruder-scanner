@@ -34,7 +34,7 @@
 
   <!-- top strip -->
   <text x="70" y="46" font-family="monospace" font-size="18" fill="#5a6078" letter-spacing="2">SERVEUR MCP // MODEL CONTEXT PROTOCOL</text>
-  <text x="1850" y="46" text-anchor="end" font-family="monospace" font-size="18" fill="#5a6078" letter-spacing="2">STREAMABLE HTTP // LITEMCP 0.9</text>
+  <text x="1850" y="46" text-anchor="end" font-family="monospace" font-size="18" fill="#5a6078" letter-spacing="2">STREAMABLE HTTP // LITEMCP 0.10</text>
   <line x1="70" y1="62" x2="1850" y2="62" stroke="#232637" stroke-width="1"/>
 
   <!-- title -->
@@ -103,7 +103,7 @@
     <text x="590" y="27" font-family="monospace" font-size="15" fill="#8a90a8">crates.io/crates/</text>
     <text x="760" y="27" font-family="monospace" font-size="15" fill="#f5f6fa">mcp_intruder</text>
     <text x="920" y="27" font-family="monospace" font-size="15" fill="#5a6078">·</text>
-    <text x="940" y="27" font-family="monospace" font-size="15" fill="#00e5ff">v0.6.7</text>
+    <text x="940" y="27" font-family="monospace" font-size="15" fill="#00e5ff">v0.6.8</text>
     <text x="1756" y="27" text-anchor="end" font-family="monospace" font-size="15" fill="#2ecc71" font-weight="bold">24 OUTILS · 340 SKILLS</text>
   </g>
 </svg>

@@ -218,7 +218,7 @@ mcp_intruder tools   # diagnostique les binaires + SecLists + PostgreSQL
 
 ## 🧪 Tests & Qualité
 
-- **152 tests unitaires** : `cargo test` (0 failed) — dont une vingtaine d'anti-régression qui verrouillent les invariants critiques (score clamp, bind params, pas de sh -c, exclusions lab chainx, etc.)
+- **209 tests unitaires** : `cargo test` (0 failed) — dont une vingtaine d'anti-régression qui verrouillent les invariants critiques (score clamp, bind params, pas de sh -c, exclusions lab chainx, etc.)
 - **Clippy strict** : `cargo clippy --all-targets -- -D warnings` (0 warning)
 - **Lint format** : `cargo fmt --check`
 - **Build release** : 4.7 MB, optimisé LTO

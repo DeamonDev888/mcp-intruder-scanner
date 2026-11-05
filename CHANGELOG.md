@@ -4,6 +4,17 @@ Toutes les modifications notables de `mcp_intruder` sont documentées ici.
 
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.6.8] — 2026-11-05
+
+### Changed
+- **litemcp 0.7.1 → 0.10.0** : aucune modification de code nécessaire ; build, `clippy -D warnings`
+  et suite complète rejoués sur la nouvelle version, puis serveur relancé et `tools/list`
+  revérifié (24 outils, `serverInfo` 0.6.8).
+- **Bannières alignées** : `banner-litemcp.svg` annonce « LITEMCP 0.10 » (et non plus 0.9),
+  les deux assets passent en v0.6.8.
+- **README** : compte de tests corrigé (152 → 209, mesuré) ; en-tête de `src/mcp/mod.rs`
+  aligné sur les 24 outils réellement exposés.
+
 ## [0.6.7] — 2026-10-29
 
 ### Changed

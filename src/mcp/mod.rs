@@ -6,7 +6,7 @@
 // ; le binaire `src/bin/mcp_server.rs` se charge des arguments CLI, du bind
 // et de `serve()`.
 //
-// Inventaire des outils exposes (21) :
+// Inventaire des outils exposes (24) :
 // - `ping`               — sonde de vie (ici, dans mod.rs) ;
 // - `scan_target`        — scan complet orchestre (tools_scan.rs) ;
 // - `scan_history`       — historique PostgreSQL (tools_scan.rs) ;
