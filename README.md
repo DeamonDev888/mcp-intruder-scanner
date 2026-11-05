@@ -199,7 +199,7 @@ Chaque scan est **automatiquement persisté** dans une base PostgreSQL locale (n
 - `audit_subdomains`, `audit_findings`
 - `audit_geo`, `audit_email_sec`, `audit_web_endpoints`
 - `audit_dns_hardening`, `audit_tool_outputs`, `audit_tech` (composants versionnés + verdict EOL), `audit_loot` (fichiers exfiltrés, opt-in `--loot`)
-- En complément : `audit_impact` (verdicts des modules de preuve d'impact) et `audit_surface` (cartographie surfx) sont alimentées par les bins dédiés, hors `save_scan`
+- En complément : `audit_impact` (verdicts des modules de preuve d'impact) et `audit_surface` (cartographie surfx) sont alimentées par les outils dédiés, hors `save_scan`
 
 ```bash
 # Lister les 10 derniers scans de example.com
