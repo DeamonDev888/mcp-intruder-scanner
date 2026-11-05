@@ -21,6 +21,89 @@
 
 ---
 
+## 🔌 Brancher le serveur MCP (Streamable HTTP)
+
+> [!IMPORTANT]
+> **Le serveur n'a pas de transport stdio.** `mcp_server` ouvre un socket et sert
+> **MCP Streamable HTTP** sur `POST /mcp`. Dans la config d'un client, il faut donc
+> le transport `http` + l'URL — jamais `command` / `args` (une config stdio ne fera
+> que lancer un process qui n'écoute rien).
+
+### 1. Démarrer le serveur
+
+```bash
+mcp_server --bind 127.0.0.1:7808 --db mcp_intruder_audit
+# MCP   : http://127.0.0.1:7808/mcp
+# Santé : http://127.0.0.1:7808/health   -> ok
+```
+
+Les réponses sont du JSON, ou du SSE (`text/event-stream`) : le client doit envoyer
+`Accept: application/json, text/event-stream`.
+
+### 2. Déclarer le serveur dans le client
+
+**Claude Code** (une commande) :
+
+```bash
+claude mcp add --transport http mcp-intruder http://127.0.0.1:7808/mcp
+```
+
+**Cursor** (`.cursor/mcp.json`) et **Claude Desktop** (`claude_desktop_config.json`) :
+
+```json
+{
+  "mcpServers": {
+    "mcp-intruder": {
+      "type": "http",
+      "url": "http://127.0.0.1:7808/mcp"
+    }
+  }
+}
+```
+
+**VS Code / Copilot** (`.vscode/mcp.json`) — la clé est `servers`, pas `mcpServers` :
+
+```json
+{
+  "servers": {
+    "mcp-intruder": {
+      "type": "http",
+      "url": "http://127.0.0.1:7808/mcp"
+    }
+  }
+}
+```
+
+**Client limité au stdio** (bridge, si le transport HTTP n'est pas supporté) :
+
+```bash
+npx -y mcp-remote http://127.0.0.1:7808/mcp
+```
+
+### 3. Vérifier la connexion sans client MCP
+
+```bash
+# 1) le serveur répond
+curl -s http://127.0.0.1:7808/health          # -> ok
+
+# 2) la surface d'outils est bien là (24 attendus)
+curl -s http://127.0.0.1:7808/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"curl","version":"0"}}}'
+```
+
+### 4. Serveur sur une autre machine
+
+Le serveur écoute en **loopback par défaut**. Pour un Kali distant, garder le bind
+loopback et passer par un tunnel plutôt que d'exposer le port :
+
+```bash
+ssh -N -L 7808:127.0.0.1:7808 <utilisateur>@<hote-kali>
+# puis http://127.0.0.1:7808/mcp côté client
+```
+
+---
 ## 🤖 Guide Spécifique pour Agents IA & Automatisation CLI
 
 > [!IMPORTANT]
@@ -230,7 +313,7 @@ cargo clippy --all-targets -- -D warnings  # strict : 0 warning obligatoire
 
 ---
 
-## 🧩 21 bins d'impact intégrés (même crate depuis v0.5.0)
+## 🧩 21 outils d'impact intégrés (même crate depuis v0.5.0)
 
 > Depuis la v0.5.0, les modules d'impact font **partie de `mcp_intruder`** (la crate d'impact historique a été yankée sur crates.io — un seul crate, un seul `cargo install`).
 
@@ -238,7 +321,7 @@ Tous lecture-seule stricte (GET/DNS uniquement). Verdicts persistés dans `audit
 
 | Module | Rôle |
 |---|---|
-| `mcp_intruder chainx` | Dispatcher automatique — lit le catalogue DB, route chaque finding vers son bin (depuis v0.5.6 : finding DB exposée → `mysqlx`/`redisx`/`mongodx`) |
+| `mcp_intruder chainx` | Dispatcher automatique — lit le catalogue DB, route chaque finding vers son outil (depuis v0.5.6 : finding DB exposée → `mysqlx`/`redisx`/`mongodx`) |
 | `mcp_intruder envx <url>` | Preuve de contenu d'un `.env` exposé (gates anti-faux-positif WAF) |
 | `mcp_intruder gitdump <base>` | Preuve d'un dépôt `.git/` exposé (remotes + identités, pas de dump complet) |
 | `mcp_intruder keyprobe` (stdin) | Classification + vérif Google Maps des clés API |
