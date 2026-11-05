@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 800" width="1920" height="800" role="img" aria-label="MCP Intruder - Serveur MCP offensif - 24 outils, 340 skills, 39 modules de scan, 21 bins">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 800" width="1920" height="800" role="img" aria-label="MCP Intruder - Serveur MCP offensif Kali - 24 outils, 340 skills, 39 modules de scan">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#07080e"/>
@@ -60,8 +60,8 @@
   <text x="300" y="285" font-family="'Segoe UI', Arial, sans-serif" font-size="150" font-weight="800" fill="#f5f6fa">mcp</text>
   <text x="700" y="285" font-family="'Segoe UI', Arial, sans-serif" font-size="150" font-weight="300" fill="#3a3f55">/</text>
   <text x="790" y="285" font-family="'Segoe UI', Arial, sans-serif" font-size="150" font-weight="800" fill="#ff224e" filter="url(#glow)">intruder</text>
-  <text x="302" y="350" font-family="monospace" font-size="24" fill="#8a90a8" letter-spacing="3">SERVEUR MCP OFFENSIF // DOCKER - LOCAL - VPS - SSH</text>
-  <text x="302" y="395" font-family="monospace" font-size="20" fill="#5a6078">Plan de controle universel : cycle de vie asynchrone (lancer / suivre / recuperer / arreter), 39 modules, 21 bins.</text>
+  <text x="302" y="350" font-family="monospace" font-size="24" fill="#8a90a8" letter-spacing="3">SERVEUR MCP OFFENSIF // KALI - DOCKER - LOCAL - VPS</text>
+  <text x="302" y="395" font-family="monospace" font-size="20" fill="#5a6078">Plan de controle universel : lancer un scan, le suivre, recuperer le resultat — 39 modules Kali.</text>
 
   <!-- live card (top right) -->
   <g transform="translate(1420,100)">
@@ -75,7 +75,7 @@
     <text x="24" y="110" font-family="monospace" font-size="15.5" fill="#8a90a8">BIND</text>
     <text x="406" y="110" text-anchor="end" font-family="monospace" font-size="15.5" fill="#00e5ff">127.0.0.1:7808</text>
     <text x="24" y="138" font-family="monospace" font-size="15.5" fill="#8a90a8">OUTILS</text>
-    <text x="406" y="138" text-anchor="end" font-family="monospace" font-size="15.5" fill="#ff224e">24 outils · 39 modules · 21 bins</text>
+    <text x="406" y="138" text-anchor="end" font-family="monospace" font-size="15.5" fill="#ff224e">24 outils · 39 modules Kali</text>
   </g>
 
   <!-- feature cards -->
@@ -97,9 +97,9 @@
     <!-- card 3 -->
     <g transform="translate(1250,470)">
       <text x="0" y="0" font-size="18" fill="#ff224e">&gt;</text>
-      <text x="24" y="0" font-size="18" fill="#f5f6fa" font-weight="bold">CYCLE DE VIE ASYNCHRONE</text>
+      <text x="24" y="0" font-size="18" fill="#f5f6fa" font-weight="bold">SCANS EN ARRIERE-PLAN</text>
       <text x="24" y="28" font-size="15" fill="#8a90a8">orchestrateur autonome : job_start, job_status,</text>
-      <text x="24" y="50" font-size="15" fill="#8a90a8">job_result, job_list, job_stop — 21 bins d'impact</text>
+      <text x="24" y="50" font-size="15" fill="#8a90a8">job_result, job_list, job_stop — sans bloquer l'agent</text>
     </g>
   </g>
 
@@ -109,14 +109,14 @@
     <text x="180" y="672" font-size="15" fill="#5a6078" letter-spacing="2">OUTILS MCP</text>
     <text x="480" y="640" font-size="74" font-weight="bold" fill="#00e5ff" filter="url(#glowCyan)">39</text>
     <text x="480" y="672" font-size="15" fill="#5a6078" letter-spacing="2">MODULES SCAN</text>
-    <text x="780" y="640" font-size="74" font-weight="bold" fill="#00e5ff" filter="url(#glowCyan)">21</text>
-    <text x="780" y="672" font-size="15" fill="#5a6078" letter-spacing="2">BINS IMPACT</text>
+    <text x="780" y="640" font-size="74" font-weight="bold" fill="#00e5ff" filter="url(#glowCyan)">5</text>
+    <text x="780" y="672" font-size="15" fill="#5a6078" letter-spacing="2">OUTILS DE SUIVI</text>
     <text x="1080" y="640" font-size="74" font-weight="bold" fill="#00e5ff" filter="url(#glowCyan)">340</text>
     <text x="1080" y="672" font-size="15" fill="#5a6078" letter-spacing="2">SKILLS</text>
-    <text x="1380" y="640" font-size="74" font-weight="bold" fill="#ff224e" filter="url(#glow)">ASYNC</text>
-    <text x="1380" y="672" font-size="15" fill="#5a6078" letter-spacing="2">CYCLE DE VIE</text>
+    <text x="1380" y="640" font-size="74" font-weight="bold" fill="#ff224e" filter="url(#glow)">KALI</text>
+    <text x="1380" y="672" font-size="15" fill="#5a6078" letter-spacing="2">NATIF OU CONTENEUR</text>
     <text x="1680" y="640" font-size="74" font-weight="bold" fill="#ffd75f">RUST</text>
-    <text x="1680" y="672" font-size="15" fill="#5a6078" letter-spacing="2">ZERO RUNTIME ASYNC</text>
+    <text x="1680" y="672" font-size="15" fill="#5a6078" letter-spacing="2">ZERO RUNTIME</text>
   </g>
 
   <!-- terminal status bar -->
