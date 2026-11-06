@@ -39,15 +39,7 @@ mcp_server --bind 127.0.0.1:7808 --db mcp_intruder_audit
 Les réponses sont du JSON, ou du SSE (`text/event-stream`) : le client doit envoyer
 `Accept: application/json, text/event-stream`.
 
-### 2. Déclarer le serveur dans le client
-
-**Claude Code** (une commande) :
-
-```bash
-claude mcp add --transport http mcp-intruder http://127.0.0.1:7808/mcp
-```
-
-**Cursor** (`.cursor/mcp.json`) et **Claude Desktop** (`claude_desktop_config.json`) :
+### 2. Config universelle (Hermes, GrokBot, Claude Code)
 
 ```json
 {
@@ -60,49 +52,17 @@ claude mcp add --transport http mcp-intruder http://127.0.0.1:7808/mcp
 }
 ```
 
-**VS Code / Copilot** (`.vscode/mcp.json`) — la clé est `servers`, pas `mcpServers` :
-
-```json
-{
-  "servers": {
-    "mcp-intruder": {
-      "type": "http",
-      "url": "http://127.0.0.1:7808/mcp"
-    }
-  }
-}
-```
-
-**Client limité au stdio** (bridge, si le transport HTTP n'est pas supporté) :
+Ce bloc est le même partout (Hermes, GrokBot, Claude Code, Cursor…) : seul le chemin du fichier
+de config change. En CLI, Claude Code accepte l'équivalent en une commande :
 
 ```bash
-npx -y mcp-remote http://127.0.0.1:7808/mcp
+claude mcp add --transport http mcp-intruder http://127.0.0.1:7808/mcp
 ```
 
-### 3. Vérifier la connexion sans client MCP
-
-```bash
-# 1) le serveur répond
-curl -s http://127.0.0.1:7808/health          # -> ok
-
-# 2) la surface d'outils est bien là (24 attendus)
-curl -s http://127.0.0.1:7808/mcp \
-  -H 'Content-Type: application/json' \
-  -H 'Accept: application/json, text/event-stream' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"curl","version":"0"}}}'
-```
-
-### 4. Serveur sur une autre machine
-
-Le serveur écoute en **loopback par défaut**. Pour un Kali distant, garder le bind
-loopback et passer par un tunnel plutôt que d'exposer le port :
-
-```bash
-ssh -N -L 7808:127.0.0.1:7808 <utilisateur>@<hote-kali>
-# puis http://127.0.0.1:7808/mcp côté client
-```
+> VS Code / Copilot attend la clé `servers` au lieu de `mcpServers` — même contenu sinon.
 
 ---
+
 ## 🤖 Guide Spécifique pour Agents IA & Automatisation CLI
 
 > [!IMPORTANT]
