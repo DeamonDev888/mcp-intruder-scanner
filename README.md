@@ -28,7 +28,10 @@
 > le transport `http` + l'URL — jamais `command` / `args` (une config stdio ne fera
 > que lancer un process qui n'écoute rien).
 
-### 1. Démarrer le serveur
+### 1. Installer puis démarrer
+
+**Installation** : `cargo install mcp_intruder`, puis `wizard` — il prépare Docker, l'image Kali
+et les 20 outils, et vous dit quoi lancer à la fin.
 
 ```bash
 mcp_intruder_server
@@ -239,6 +242,17 @@ Pour un utilisateur en direct sur le serveur Kali, `mcp-intruder` propose une co
 
 ## 🛠️ Déploiement & Installation
 
+**Le plus simple — l'assistant :**
+
+```bash
+cargo install mcp_intruder   # moteur + serveur + wizard
+wizard                        # Docker, image Kali, 20 outils, puis commande de lancement
+```
+
+Le wizard détecte la plateforme (Windows, Linux, macOS, Kali natif), installe ce qui manque et
+rappelle à la fin la commande exacte à lancer — `mcp_intruder_server` en natif, `docker run …`
+en conteneur. La suite de cette section est la procédure manuelle.
+
 ```bash
 # 1. Compilation depuis le repo :
 git clone https://github.com/DeamonDev888/mcp-intruder-scanner.git
@@ -298,7 +312,7 @@ conteneur, l'équivalent reste : `sudo apt install rustscan sqlmap subfinder htt
 - **Build release** : 4.7 MB, optimisé LTO
 
 ```bash
-cargo test                  # 152/152 OK
+cargo test                  # 211/211 OK
 cargo clippy --all-targets -- -D warnings  # strict : 0 warning obligatoire
 ```
 

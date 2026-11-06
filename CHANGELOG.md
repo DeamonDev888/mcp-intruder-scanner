@@ -13,11 +13,14 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - **Image serveur conteneurisée** (`Dockerfile`) : build multi-stage (Rust → image Kali
   avec les 20 paquets), `ENTRYPOINT ["mcp_intruder_server"]` + `CMD ["--bind",
   "0.0.0.0:7808"]`. Le serveur démarre donc **avec le conteneur**, sans commande.
-- Le wizard (diagnostic et mode headless) termine désormais par « Démarrer le serveur MCP :
-  mcp_intruder_server » ; le serveur affiche au démarrage l'URL à déclarer dans le client.
+- Le wizard (diagnostic et mode headless) termine désormais par le geste adapté au mode :
+  « Démarrer le serveur MCP : mcp_intruder_server » en natif, « Le serveur démarre avec le
+  conteneur : docker run -p 7808:7808 mcp-intruder/server » sinon. Le serveur affiche au
+  démarrage l'URL à déclarer dans le client.
 
 ### Note
-- En natif, le serveur doit être lancé à la main ; en conteneur, il se lance tout seul.
+- En natif, le serveur doit être lancé à la main ; en conteneur, il se lance tout seul avec
+  le conteneur (y compris sous Windows : démarrer le conteneur suffit).
 
 ## [0.6.9] — 2026-11-05
 

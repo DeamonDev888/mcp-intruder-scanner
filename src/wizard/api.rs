@@ -121,13 +121,18 @@ pub fn diagnose_platform(p: &Platform) -> Diagnostic {
         state: image_state,
     });
 
-    // Etape 4 : controle final.
+    // Etape 4 : controle final. Le geste de lancement differe selon le mode :
+    // en natif c'est le binaire, en conteneur c'est l'image qui le demarre.
+    let launch_hint = if p.is_native_kali || p.container_runtime.is_empty() {
+        "Demarrer le serveur : mcp_intruder_server"
+    } else {
+        "Le serveur demarre avec le conteneur : docker run -p 7808:7808 mcp-intruder/server"
+    };
     steps.push(Step {
         id: "verify",
         title: "Outillage operationnel",
         detail: if tools_ready {
-            "Les modules de scan peuvent s'executer. Demarrer le serveur : mcp_intruder_server"
-                .to_string()
+            format!("Les modules de scan peuvent s'executer. {launch_hint}")
         } else {
             "En attente de la resolution des etapes precedentes.".to_string()
         },

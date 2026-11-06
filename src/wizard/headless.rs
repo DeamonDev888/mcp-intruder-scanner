@@ -65,7 +65,12 @@ fn show_diagnostic() {
         println!("         {}", s.detail);
     }
     if d.tools_ready {
-        println!("{}Pour demarrer le serveur MCP : mcp_intruder_server", NL);
+        if d.is_native_kali || d.container_runtime.is_empty() {
+            println!("{}Demarrer le serveur MCP : mcp_intruder_server", NL);
+        } else {
+            println!("{}Le serveur demarre avec le conteneur :", NL);
+            println!("docker run -p 7808:7808 mcp-intruder/server");
+        }
         println!("Puis declarer http://127.0.0.1:7808/mcp dans votre client (Claude Code, Hermes, GrokBot).");
     }
 }
@@ -178,6 +183,11 @@ pub fn run() -> i32 {
         );
         println!("  $ mcp_intruder <cible> --fast --json");
         println!("  $ mcp_intruder tools          # etat de l'outillage");
+        if final_d.is_native_kali || final_d.container_runtime.is_empty() {
+            println!("  $ mcp_intruder_server         # serveur MCP (natif)");
+        } else {
+            println!("  $ docker run -p 7808:7808 mcp-intruder/server   # serveur MCP (conteneur)");
+        }
         0
     } else {
         println!(
