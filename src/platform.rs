@@ -575,15 +575,18 @@ mod tests {
 
     #[test]
     fn commande_native_prioritaire_si_binaire_present() {
-        // "sh" est present sur tous les Unix ; sur Windows la commande doit
-        // basculer sur le conteneur ou ne pas etre construite.
+        // Le binaire existe-t-il dans le PATH ? (sh sous Unix, sh.exe de Git
+        // Bash sous Windows — les runners GitHub en ont un). Si oui la
+        // commande est native ; sinon elle bascule sur le conteneur, ou
+        // n'est pas construite sans runtime.
+        let native = which("sh").is_some();
         let r = build_tool_command("docker", "sh", &["-c", "echo hi"]);
-        if cfg!(windows) {
-            assert!(r.is_none() || r.unwrap().0 == "docker");
-        } else {
-            let (bin, args) = r.expect("commande construite");
+        if native {
+            let (bin, args) = r.expect("commande native construite");
             assert_eq!(bin, "sh");
             assert_eq!(args, vec!["-c".to_string(), "echo hi".to_string()]);
+        } else {
+            assert!(r.is_none() || r.unwrap().0 == "docker");
         }
     }
 
