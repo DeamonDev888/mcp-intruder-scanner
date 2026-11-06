@@ -3,7 +3,7 @@
 // Expose le moteur de scan comme outils MCP (Streamable HTTP, crate
 // `litemcp`). Point d'entree unique : `build_server()` retourne le
 // ServerBuilder complet (tous les outils enregistres, annotees, observabilite)
-// ; le binaire `src/bin/mcp_server.rs` se charge des arguments CLI, du bind
+// ; le binaire `src/bin/mcp_intruder_server.rs` se charge des arguments CLI, du bind
 // et de `serve()`.
 //
 // Inventaire des outils exposes (24) :
@@ -47,7 +47,7 @@ use serde::Serialize;
 use crate::target_parser::{TargetParser, TargetVerdict};
 
 /// Nom de la base PostgreSQL par defaut (meme valeur que le flag `--db`
-/// du CLI et du binaire `mcp_server`).
+/// du CLI et du binaire `mcp_intruder_server`).
 pub const DEFAULT_DB_NAME: &str = "mcp_intruder_audit";
 
 /// Troncature des champs `raw_output` geants des modules (sortie brute

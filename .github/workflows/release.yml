@@ -76,7 +76,7 @@ jobs:
         run: |
           set -euo pipefail
           cargo run --release --quiet --bin mcp_intruder -- --version
-          cargo run --release --quiet --bin mcp_server -- --version
+          cargo run --release --quiet --bin mcp_intruder_server -- --version
           # wizard --status sort 1 quand l'outillage n'est pas encore installe
           # (cas normal sur un runner : pas de Kali natif, image Docker a tirer)
           # -> diagnostic affiche mais non bloquant en CI
@@ -91,7 +91,7 @@ jobs:
           PKG="mcp-intruder-${{ matrix.label }}"
           mkdir -p "dist/$PKG"
           cp target/release/mcp_intruder "dist/$PKG/"
-          cp target/release/mcp_server "dist/$PKG/"
+          cp target/release/mcp_intruder_server "dist/$PKG/"
           cp target/release/wizard "dist/$PKG/"
           cp target/release/dashboard "dist/$PKG/"
           cp LICENSE "dist/$PKG/" 2>/dev/null || true
@@ -107,7 +107,7 @@ jobs:
           $pkg = 'mcp-intruder-${{ matrix.label }}'
           New-Item -ItemType Directory -Force -Path "dist/$pkg" | Out-Null
           Copy-Item 'target/release/mcp_intruder.exe' "dist/$pkg/"
-          Copy-Item 'target/release/mcp_server.exe'  "dist/$pkg/"
+          Copy-Item 'target/release/mcp_intruder_server.exe'  "dist/$pkg/"
           Copy-Item 'target/release/wizard.exe'       "dist/$pkg/"
           Copy-Item 'target/release/dashboard.exe'   "dist/$pkg/"
           Copy-Item 'LICENSE'   "dist/$pkg/" -ErrorAction SilentlyContinue

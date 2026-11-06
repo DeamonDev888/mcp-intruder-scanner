@@ -4,6 +4,21 @@ Toutes les modifications notables de `mcp_intruder` sont documentées ici.
 
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.6.10] — 2026-11-05
+
+### Changed
+- **Binaire renommé `mcp_server` → `mcp_intruder_server`** : `mcp_server` est un nom
+  générique qui entrait en collision avec d'autres serveurs MCP de la machine. Les
+  archives de release, le `Dockerfile`, le wizard et le README suivent.
+- **Image serveur conteneurisée** (`Dockerfile`) : build multi-stage (Rust → image Kali
+  avec les 20 paquets), `ENTRYPOINT ["mcp_intruder_server"]` + `CMD ["--bind",
+  "0.0.0.0:7808"]`. Le serveur démarre donc **avec le conteneur**, sans commande.
+- Le wizard (diagnostic et mode headless) termine désormais par « Démarrer le serveur MCP :
+  mcp_intruder_server » ; le serveur affiche au démarrage l'URL à déclarer dans le client.
+
+### Note
+- En natif, le serveur doit être lancé à la main ; en conteneur, il se lance tout seul.
+
 ## [0.6.9] — 2026-11-05
 
 ### Fixed

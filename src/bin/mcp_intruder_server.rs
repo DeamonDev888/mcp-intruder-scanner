@@ -1,4 +1,4 @@
-// src/bin/mcp_server.rs — Binaire serveur MCP de MCP Intruder.
+// src/bin/mcp_intruder_server.rs — Binaire serveur MCP de MCP Intruder.
 //
 // Construit le serveur MCP complet (`mcp_intruder::mcp::build_server_with_db`)
 // et le sert en Streamable HTTP (crate litemcp) : POST /mcp pour chaque
@@ -13,7 +13,7 @@ use clap::Parser;
 /// Arguments du binaire serveur MCP.
 #[derive(Parser, Debug)]
 #[command(
-    name = "mcp_server",
+    name = "mcp_intruder_server",
     version,
     about = "MCP Intruder — serveur Model Context Protocol (Streamable HTTP, litemcp) : \
              expose le moteur de scan de surface comme outils MCP"

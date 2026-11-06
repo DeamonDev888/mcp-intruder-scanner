@@ -41,7 +41,7 @@
 
   <!-- top strip -->
   <text x="70" y="42" font-family="monospace" font-size="17" fill="#5a6078" letter-spacing="2">PLAN DE CONTROLE MCP // SERVEUR STREAMABLE HTTP</text>
-  <text x="1850" y="42" text-anchor="end" font-family="monospace" font-size="17" fill="#5a6078" letter-spacing="2">v0.6.9 // RUST // LITEMCP</text>
+  <text x="1850" y="42" text-anchor="end" font-family="monospace" font-size="17" fill="#5a6078" letter-spacing="2">v0.6.10 // RUST // LITEMCP</text>
   <line x1="70" y1="58" x2="1850" y2="58" stroke="#232637" stroke-width="1"/>
 
   <!-- logo reticle -->

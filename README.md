@@ -23,7 +23,7 @@
 ## 🔌 Brancher le serveur MCP (Streamable HTTP)
 
 > [!IMPORTANT]
-> **Le serveur n'a pas de transport stdio.** `mcp_server` ouvre un socket et sert
+> **Le serveur n'a pas de transport stdio.** `mcp_intruder_server` ouvre un socket et sert
 > **MCP Streamable HTTP** sur `POST /mcp`. Dans la config d'un client, il faut donc
 > le transport `http` + l'URL — jamais `command` / `args` (une config stdio ne fera
 > que lancer un process qui n'écoute rien).
@@ -31,18 +31,28 @@
 ### 1. Démarrer le serveur
 
 ```bash
-mcp_server
+mcp_intruder_server
 ```
 
 C'est tout : il écoute sur **http://127.0.0.1:7808/mcp** (santé : `/health`) avec la base
 `mcp_intruder_audit`. Les deux options qui suivent n'existent que pour changer ces défauts :
 
 ```bash
-mcp_server --bind 127.0.0.1:9000 --db ma_base    # autre port / autre base
+mcp_intruder_server --bind 127.0.0.1:9000 --db ma_base    # autre port / autre base
 ```
 
 Si l'outillage n'est pas encore installé, lancez `wizard` **une fois** : il prépare
-l'environnement (Docker + outils Kali), ensuite `mcp_server` suffit.
+l'environnement (Docker + outils Kali), ensuite `mcp_intruder_server` suffit.
+
+**Natif ou conteneur, ce n'est pas le même geste :**
+
+| Mode | Commande | Qui lance le serveur |
+|---|---|---|
+| **Natif** | `mcp_intruder_server` | **vous** — il sert `/mcp` tant qu'il tourne |
+| **Conteneur** | `docker build -t mcp-intruder/server .` puis `docker run -p 7808:7808 mcp-intruder/server` | **l'image** — l'`ENTRYPOINT` démarre le serveur avec le conteneur, aucun argument à passer |
+
+> Le binaire s'appelle `mcp_intruder_server` (et non `mcp_server`) : ce nom générique entrait
+> en collision avec d'autres serveurs MCP installés sur la même machine.
 
 Les réponses sont du JSON, ou du SSE (`text/event-stream`) : le client doit envoyer
 `Accept: application/json, text/event-stream`.
@@ -339,7 +349,7 @@ mcp_intruder impacts                            # dashboard
 
 ## 🖥️ Serveur MCP
 
-Le binaire `mcp_server` expose le scanner aux agents IA via le protocole **MCP** (Model Context Protocol),
+Le binaire `mcp_intruder_server` expose le scanner aux agents IA via le protocole **MCP** (Model Context Protocol),
 propulsé par [LiteMCP](https://github.com/DeamonDev888/litemcp) — la lib MCP la plus légère et la plus rapide
 (Streamable HTTP only, zéro runtime async, serde uniquement) :
 
@@ -379,7 +389,7 @@ cargo install mcp_intruder
 ```
 
 **Ou téléchargez les binaires pré-compilés** — chaque archive embarque
-`mcp_intruder` (CLI), `mcp_server` (MCP), `wizard` et `dashboard` :
+`mcp_intruder` (CLI), `mcp_intruder_server` (MCP), `wizard` et `dashboard` :
 
 | Plateforme | Archive |
 |---|---|

@@ -65,7 +65,7 @@ fn show_diagnostic() {
         println!("         {}", s.detail);
     }
     if d.tools_ready {
-        println!("{}Pour demarrer le serveur MCP : mcp_server", NL);
+        println!("{}Pour demarrer le serveur MCP : mcp_intruder_server", NL);
         println!("Puis declarer http://127.0.0.1:7808/mcp dans votre client (Claude Code, Hermes, GrokBot).");
     }
 }

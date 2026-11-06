@@ -23,7 +23,7 @@
 pub mod dash;
 
 /// Serveur Model Context Protocol : expose le moteur de scan comme outils
-/// MCP. Le binaire `src/bin/mcp_server.rs` construit et sert le serveur ;
+/// MCP. Le binaire `src/bin/mcp_intruder_server.rs` construit et sert le serveur ;
 /// `mcp::build_server()` est la seule porte d'entree.
 pub mod mcp;
 

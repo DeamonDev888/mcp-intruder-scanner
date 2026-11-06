@@ -127,7 +127,7 @@ const BIN_STDOUT_MAX_CHARS: usize = 50_000;
 const BIN_STDERR_MAX_CHARS: usize = 10_000;
 
 /// Liste blanche STRICTE des bins d'impact pilotables en job. Jamais
-/// `dashboard` (serveur web), jamais `mcp_server` / `mcp_intruder`
+/// `dashboard` (serveur web), jamais `mcp_intruder_server` / `mcp_intruder`
 /// (récursion). Le nom vient d'une énumération fermée : aucune entrée
 /// opérateur ne atteint `Command::new`.
 const BIN_WHITELIST: &[&str] = &[
