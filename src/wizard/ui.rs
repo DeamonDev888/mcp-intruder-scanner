@@ -108,6 +108,7 @@ h2{font-size:14px;margin:0;letter-spacing:.12em;text-transform:uppercase;color:v
 .dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:0 0 auto;background:var(--muted)}
 .dot.done{background:var(--ok);box-shadow:0 0 9px rgba(95,191,127,.55)}
 .dot.todo{background:var(--amber-dim)} .dot.ko{background:var(--ko)}
+.dot.warn{background:var(--warn)}
 .dot.busy{background:var(--amber);animation:pulse 1s infinite}
 @keyframes pulse{50%{opacity:.25}}
 .step-t{font-size:13px;color:var(--fg)}
@@ -160,6 +161,7 @@ function renderFacts(d){
     ['Systeme', d.os_label + (d.distro ? ' — ' + d.distro : '')],
     ['Kali natif', d.is_native_kali ? 'oui' : 'non'],
     ['Runtime', d.container_runtime ? d.container_runtime + ' ' + (d.container_version||'') : 'absent'],
+    ['Demon', d.container_runtime ? (d.container_daemon_ready ? 'actif' : 'arrete') : '—'],
     ['Image Kali', d.kali_image_present ? 'presente' : 'absente'],
     ['Outillage', d.tools_ready ? 'operationnel' : 'incomplet'],
   ];

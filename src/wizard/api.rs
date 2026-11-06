@@ -39,6 +39,11 @@ pub struct Diagnostic {
     pub is_native_kali: bool,
     pub container_runtime: String,
     pub container_version: String,
+    /// Le demon du runtime repond (sinon l'installation est inutile : il faut
+    /// le demarrer).
+    pub container_daemon_ready: bool,
+    /// Consigne de demarrage du demon, adaptee a l'OS (vide si aucun runtime).
+    pub daemon_start_hint: String,
     pub kali_image_present: bool,
     pub native_tools_present: bool,
     pub tools_ready: bool,
@@ -60,8 +65,8 @@ pub fn diagnose() -> Diagnostic {
 pub fn diagnose_platform(p: &Platform) -> Diagnostic {
     // L'outillage n'est pret que si l'image DERIVEE existe (base + paquets),
     // pas seulement l'image de base Kali.
-    let tools_ready =
-        p.is_native_kali || (p.derived_image_present && !p.container_runtime.is_empty());
+    let tools_ready = p.is_native_kali
+        || (!p.container_runtime.is_empty() && p.container_daemon_ready && p.derived_image_present);
 
     let mut steps = Vec::new();
 
@@ -73,14 +78,25 @@ pub fn diagnose_platform(p: &Platform) -> Diagnostic {
         state: "done",
     });
 
-    // Etape 2 : runtime de conteneur.
-    let runtime_state = if !p.container_runtime.is_empty() || p.is_native_kali {
+    // Etape 2 : runtime de conteneur. Un binaire present ne suffit pas : le
+    // demon doit repondre, sinon l'image ne peut ni etre tiree ni executee.
+    let runtime_ready = !p.container_runtime.is_empty() && p.container_daemon_ready;
+    let runtime_state = if runtime_ready || p.is_native_kali {
         "done"
+    } else if !p.container_runtime.is_empty() {
+        "warn"
     } else {
         "todo"
     };
-    let runtime_detail = if !p.container_runtime.is_empty() {
+    let runtime_detail = if runtime_ready {
         format!("{} — {}", p.container_runtime, p.container_version)
+    } else if !p.container_runtime.is_empty() {
+        format!(
+            "{} installe ({}) mais le demon ne repond pas : {}",
+            p.container_runtime,
+            p.container_version,
+            platform::daemon_start_hint(p.os, &p.container_runtime)
+        )
     } else if p.is_native_kali {
         "Inutile : l'outillage Kali est present nativement.".to_string()
     } else {
@@ -133,6 +149,11 @@ pub fn diagnose_platform(p: &Platform) -> Diagnostic {
         title: "Outillage operationnel",
         detail: if tools_ready {
             format!("Les modules de scan peuvent s'executer. {launch_hint}")
+        } else if !p.container_runtime.is_empty() && !p.container_daemon_ready {
+            format!(
+                "Le runtime est installe mais son demon est arrete : {}",
+                platform::daemon_start_hint(p.os, &p.container_runtime)
+            )
         } else {
             "En attente de la resolution des etapes precedentes.".to_string()
         },
@@ -148,6 +169,13 @@ pub fn diagnose_platform(p: &Platform) -> Diagnostic {
             "{} : le runtime de conteneur est requis pour l'outillage Kali.",
             p.os
         )
+    } else if !p.container_daemon_ready {
+        format!(
+            "{} : {} est installe mais son demon est arrete — {}",
+            p.os,
+            p.container_runtime,
+            platform::daemon_start_hint(p.os, &p.container_runtime)
+        )
     } else {
         format!("{} : l'image Kali doit etre telechargee.", p.os)
     };
@@ -159,13 +187,19 @@ pub fn diagnose_platform(p: &Platform) -> Diagnostic {
         is_native_kali: p.is_native_kali,
         container_runtime: p.container_runtime.clone(),
         container_version: p.container_version.clone(),
+        container_daemon_ready: p.container_daemon_ready,
+        daemon_start_hint: if p.container_runtime.is_empty() {
+            String::new()
+        } else {
+            platform::daemon_start_hint(p.os, &p.container_runtime)
+        },
         kali_image_present: p.kali_image_present,
         native_tools_present: p.native_tools_present,
         tools_ready,
         summary: p.summary(),
         steps,
         runtime_install: CommandHint {
-            command: platform::install_runtime_hint(p.os).to_string(),
+            command: platform::install_runtime_hint(p.os),
             elevated: p.os != HostOs::Windows,
         },
         image_pull: CommandHint {
@@ -204,68 +238,86 @@ pub fn install_runtime() -> ActionResult {
         };
     }
     if !p.container_runtime.is_empty() {
+        let started = p.container_daemon_ready;
         return ActionResult {
-            ok: true,
-            message: format!("Runtime deja present : {}.", p.container_runtime),
+            ok: started,
+            message: if started {
+                format!("Runtime deja present : {}.", p.container_runtime)
+            } else {
+                format!(
+                    "{} est installe mais son demon ne repond pas : {}.",
+                    p.container_runtime,
+                    platform::daemon_start_hint(p.os, &p.container_runtime)
+                )
+            },
             output: String::new(),
             diagnostic: diagnose_platform(&p),
         };
     }
 
     let (cmd, args): (&str, Vec<&str>) = match p.os {
-        HostOs::Linux => (
-            "sudo",
-            vec![
-                "-n",
-                "apt-get",
-                "update",
-                "-qq",
-                "&&",
-                "sudo",
-                "-n",
-                "apt-get",
-                "install",
-                "-y",
-                "docker.io",
-            ],
-        ),
+        HostOs::Linux => ("sudo", Vec::new()),
         HostOs::MacOs => ("brew", vec!["install", "--cask", "docker"]),
         HostOs::Windows => (
             "winget",
-            vec!["install", "--id", "Docker.DockerDesktop", "-e"],
+            vec![
+                "install",
+                "--id",
+                "Docker.DockerDesktop",
+                "-e",
+                "--accept-source-agreements",
+                "--accept-package-agreements",
+            ],
         ),
         HostOs::Other => {
             return ActionResult {
                 ok: false,
                 message: "Systeme non reconnu : installez Docker ou Podman manuellement."
                     .to_string(),
-                output: platform::install_runtime_hint(p.os).to_string(),
+                output: platform::install_runtime_hint(p.os),
                 diagnostic: diagnose_platform(&p),
             }
         }
     };
 
-    // Sur Linux, la commande combinee avec `&&` passe par un shell : on la
-    // decompose pour rester dans la regle "args() seulement, jamais sh -c".
-    let output = if p.os == HostOs::Linux {
-        let mut out =
-            platform::run_capture("sudo", &["-n", "apt-get", "update", "-qq"]).unwrap_or_default();
-        out.push('\n');
-        out.push_str(
-            &platform::run_capture("sudo", &["-n", "apt-get", "install", "-y", "docker.io"])
-                .unwrap_or_default(),
-        );
-        out
-    } else {
-        platform::run_capture(cmd, &args).unwrap_or_default()
+    // Sur Linux, la commande depend du gestionnaire de paquets detecte :
+    // chaque etape est lancee separement (args only, jamais de shell).
+    let output = match p.os {
+        HostOs::Linux => {
+            let mut out = String::new();
+            for step in platform::linux_install_commands() {
+                let mut step_args: Vec<&str> = Vec::with_capacity(step.len() + 1);
+                step_args.push("-n");
+                step_args.extend(step.iter().copied());
+                out.push_str(&format!("$ sudo {}\n", step.join(" ")));
+                out.push_str(&platform::run_capture("sudo", &step_args).unwrap_or_default());
+                out.push('\n');
+            }
+            out
+        }
+        HostOs::MacOs => {
+            let out = platform::run_capture(cmd, &args).unwrap_or_default();
+            // Le cask installe Docker.app : on tente de le demarrer sans bloquer.
+            let _ = std::process::Command::new("open")
+                .args(["-a", "Docker"])
+                .spawn();
+            out
+        }
+        _ => platform::run_capture(cmd, &args).unwrap_or_default(),
     };
 
     let after = Platform::detect();
-    let ok = !after.container_runtime.is_empty();
+    let ok = !after.container_runtime.is_empty() && after.container_daemon_ready;
     ActionResult {
         ok,
         message: if ok {
             format!("Runtime installe : {}.", after.container_runtime)
+        } else if !after.container_runtime.is_empty() {
+            format!(
+                "{} installe mais le demon ne repond pas encore : {}.",
+                after.container_runtime,
+                platform::daemon_start_hint(after.os, &after.container_runtime)
+            )
         } else {
             format!(
                 "Installation non aboutie. Executez manuellement : {}",
@@ -292,6 +344,18 @@ pub fn pull_image() -> ActionResult {
         return ActionResult {
             ok: false,
             message: "Aucun runtime de conteneur : installez-le d'abord.".to_string(),
+            output: String::new(),
+            diagnostic: diagnose_platform(&p),
+        };
+    }
+    if !p.container_daemon_ready {
+        return ActionResult {
+            ok: false,
+            message: format!(
+                "{} est installe mais son demon ne repond pas : {}.",
+                p.container_runtime,
+                platform::daemon_start_hint(p.os, &p.container_runtime)
+            ),
             output: String::new(),
             diagnostic: diagnose_platform(&p),
         };
@@ -332,7 +396,8 @@ pub fn verify() -> ActionResult {
         .filter(|t| platform::which(t).is_none())
         .collect();
 
-    let ok = p.is_native_kali || (p.kali_image_present && !p.container_runtime.is_empty());
+    let ok = p.is_native_kali
+        || (p.kali_image_present && !p.container_runtime.is_empty() && p.container_daemon_ready);
     let message = if ok {
         format!(
             "Outillage operationnel. {} outil(s) natif(s) present(s).",
@@ -359,6 +424,47 @@ mod tests {
     use super::*;
 
     #[test]
+    fn diagnostic_d_un_runtime_arrete_invite_a_demarrer_le_demon() {
+        let p = Platform {
+            os: HostOs::Windows,
+            is_native_kali: false,
+            distro: String::new(),
+            container_runtime: "docker".to_string(),
+            container_version: "Docker version test".to_string(),
+            container_daemon_ready: false,
+            kali_image_present: true,
+            derived_image_present: true,
+            native_tools_present: false,
+        };
+        let d = diagnose_platform(&p);
+        assert_eq!(d.steps[1].state, "warn");
+        assert!(d.steps[1].detail.contains("demon"));
+        assert!(d.headline.contains("demon"));
+        assert!(!d.tools_ready);
+        assert!(d.daemon_start_hint.contains("Docker Desktop"));
+    }
+
+    #[test]
+    fn diagnostic_d_un_runtime_actif_est_operationnel() {
+        let p = Platform {
+            os: HostOs::Linux,
+            is_native_kali: false,
+            distro: "Debian".to_string(),
+            container_runtime: "docker".to_string(),
+            container_version: "Docker version test".to_string(),
+            container_daemon_ready: true,
+            kali_image_present: true,
+            derived_image_present: true,
+            native_tools_present: false,
+        };
+        let d = diagnose_platform(&p);
+        assert_eq!(d.steps[1].state, "done");
+        assert!(d.tools_ready);
+        assert!(d.headline.contains("operationnel"));
+        assert!(d.steps[3].detail.contains("docker run"));
+    }
+
+    #[test]
     fn diagnostic_expose_toutes_les_etapes() {
         let d = diagnose();
         assert_eq!(d.steps.len(), 4);
@@ -373,10 +479,12 @@ mod tests {
     fn etape_runtime_reflete_la_presence_du_runtime() {
         let d = diagnose();
         let p = Platform::detect();
-        if p.container_runtime.is_empty() && !p.is_native_kali {
-            assert_eq!(d.steps[1].state, "todo");
-        } else {
+        if p.is_native_kali || (!p.container_runtime.is_empty() && p.container_daemon_ready) {
             assert_eq!(d.steps[1].state, "done");
+        } else if !p.container_runtime.is_empty() {
+            assert_eq!(d.steps[1].state, "warn");
+        } else {
+            assert_eq!(d.steps[1].state, "todo");
         }
     }
 

@@ -8,7 +8,7 @@
 //     C'est le mode prevu pour un serveur Linux sans interface.
 //
 // Usage :
-//   mcp-intruder-wizard [--port 8098] [--headless] [--status] [--no-browser]
+//   wizard [--port 8098] [--headless] [--status] [--no-browser]
 
 use mcp_intruder::wizard::{api, headless, server::Server, DEFAULT_PORT};
 
@@ -97,7 +97,7 @@ fn main() {
             "--help" | "-h" => {
                 println!("MCP Intruder — assistant de configuration");
                 println!();
-                println!("usage: mcp-intruder-wizard [--port 8098] [--headless] [--status]");
+                println!("usage: wizard [--port 8098] [--headless] [--status]");
                 println!();
                 println!("  --port, -p     port d'ecoute (defaut 8098, 0 = port libre)");
                 println!("  --headless     mode terminal, sans navigateur (serveur Linux)");
@@ -129,11 +129,17 @@ fn main() {
 
     let server = Server { port };
     let url = format!("http://127.0.0.1:{port}");
-    if !no_browser {
+    if !no_browser && port != 0 {
         open_browser(&url);
     }
-    println!("[wizard] assistant disponible sur {url}");
-    println!("[wizard] ouvrez cette URL dans votre navigateur pour configurer l'outillage Kali");
+    if port != 0 {
+        println!("[wizard] assistant disponible sur {url}");
+    }
+    if port != 0 {
+        println!(
+            "[wizard] ouvrez cette URL dans votre navigateur pour configurer l'outillage Kali"
+        );
+    }
 
     if let Err(e) = server.serve() {
         eprintln!("[wizard] serveur impossible : {e}");

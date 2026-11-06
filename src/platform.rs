@@ -72,6 +72,10 @@ pub struct Platform {
     pub container_runtime: String,
     /// Version du runtime si presente.
     pub container_version: String,
+    /// Le demon du runtime repond : sans lui, aucun conteneur ne peut demarrer
+    /// (Docker Desktop ferme sous Windows/macOS, service docker arrete sous
+    /// Linux). Distinct de la presence du binaire.
+    pub container_daemon_ready: bool,
     /// L'image Kali de base est deja presente localement (runtime disponible).
     pub kali_image_present: bool,
     /// L'image derivee (base + outillage installe) est deja construite.
@@ -106,6 +110,11 @@ impl Platform {
         let native_tools_present = TOOLS.iter().any(|t| which(t).is_some());
 
         let (container_runtime, container_version) = detect_runtime();
+        let container_daemon_ready = if container_runtime.is_empty() {
+            false
+        } else {
+            daemon_ready(&container_runtime)
+        };
         let kali_image_present = if container_runtime.is_empty() {
             false
         } else {
@@ -123,6 +132,7 @@ impl Platform {
             distro,
             container_runtime,
             container_version,
+            container_daemon_ready,
             kali_image_present,
             derived_image_present,
             native_tools_present,
@@ -158,6 +168,13 @@ impl Platform {
             format!(
                 "{} — runtime de conteneur absent (Docker ou Podman requis pour l'outillage Kali)",
                 self.os
+            )
+        } else if !self.container_daemon_ready {
+            format!(
+                "{} — {} installe mais le demon ne repond pas ({})",
+                self.os,
+                self.container_runtime,
+                daemon_start_hint(self.os, &self.container_runtime)
             )
         } else if self.kali_image_present {
             format!(
@@ -214,11 +231,68 @@ fn read_os_release() -> (String, bool) {
 }
 
 /// Cherche un binaire dans le PATH.
+///
+/// Sous Windows, le PATH ne contient pas d'extension : un binaire installe
+/// par winget/Chocolatey n'existe que sous la forme `docker.exe`. Sans la
+/// resolution PATHEXT, la detection ne trouvait que les shims sans extension
+/// livres par Docker Desktop — un poste equipe de Docker via winget etait
+/// declare "runtime absent".
 pub fn which(tool: &str) -> Option<std::path::PathBuf> {
     let path = std::env::var_os("PATH")?;
-    std::env::split_paths(&path)
-        .map(|dir| dir.join(tool))
-        .find(|p| p.is_file() && is_executable(p))
+    let mut candidates: Vec<String> = vec![tool.to_string()];
+    if !has_extension(tool) {
+        for ext in executable_extensions() {
+            let cand = format!("{tool}{ext}");
+            if !candidates.contains(&cand) {
+                candidates.push(cand);
+            }
+        }
+    }
+    for dir in std::env::split_paths(&path) {
+        for name in &candidates {
+            let candidate = dir.join(name);
+            if candidate.is_file() && is_executable(&candidate) {
+                return Some(candidate);
+            }
+        }
+    }
+    None
+}
+
+/// Vrai si le nom d'outil porte deja une extension (`docker.exe`).
+fn has_extension(tool: &str) -> bool {
+    std::path::Path::new(tool)
+        .extension()
+        .map(|e| !e.is_empty())
+        .unwrap_or(false)
+}
+
+/// Extensions executables reconnues, dans l'ordre de priorite.
+///
+/// Windows : le fichier exact d'abord, puis PATHEXT (`.EXE`, `.CMD`, `.BAT`...).
+/// Ailleurs : aucun suffixe, le nom du binaire est exact.
+#[cfg(windows)]
+fn executable_extensions() -> Vec<String> {
+    let mut exts: Vec<String> = Vec::new();
+    if let Ok(raw) = std::env::var("PATHEXT") {
+        for part in raw.split(';') {
+            let ext = part.trim().to_lowercase();
+            if ext.starts_with('.') && !exts.contains(&ext) {
+                exts.push(ext);
+            }
+        }
+    }
+    for ext in [".exe", ".cmd", ".bat", ".com"] {
+        if !exts.iter().any(|e| e == ext) {
+            exts.push(ext.to_string());
+        }
+    }
+    exts
+}
+
+#[cfg(not(windows))]
+fn executable_extensions() -> Vec<String> {
+    Vec::new()
 }
 
 #[cfg(unix)]
@@ -251,6 +325,16 @@ fn detect_runtime() -> (String, String) {
         }
     }
     (String::new(), String::new())
+}
+
+/// Le demon du runtime repond-il ?
+///
+/// `docker info --format ok` sort "ok" quand le demon est joignable ; la
+/// commande echoue si Docker Desktop est ferme ou si le service est arrete.
+fn daemon_ready(runtime: &str) -> bool {
+    run_capture(runtime, &["info", "--format", "ok"])
+        .map(|o| o.lines().any(|l| l.trim() == "ok"))
+        .unwrap_or(false)
 }
 
 /// L'image Kali est-elle deja telechargee localement ?
@@ -287,16 +371,92 @@ pub fn run_capture(bin: &str, args: &[&str]) -> Option<String> {
     Some(s)
 }
 
+/// Gestionnaire de paquets Linux detecte (`apt`, `dnf`, `pacman`, `zypper`,
+/// `apk` ou `inconnu`).
+fn linux_pkg_manager() -> &'static str {
+    for (bin, id) in [
+        ("apt-get", "apt"),
+        ("dnf", "dnf"),
+        ("pacman", "pacman"),
+        ("zypper", "zypper"),
+        ("apk", "apk"),
+    ] {
+        if which(bin).is_some() {
+            return id;
+        }
+    }
+    "inconnu"
+}
+
+/// Commandes d'installation du runtime de conteneur sous Linux, sans le
+/// prefixe d'elevation. Le gestionnaire de paquets reel est detecte : le
+/// wizard ne propose plus `apt-get` sur une Fedora ou une Arch.
+pub fn linux_install_commands() -> Vec<Vec<&'static str>> {
+    match linux_pkg_manager() {
+        "dnf" => vec![
+            vec!["dnf", "install", "-y", "docker"],
+            vec!["systemctl", "enable", "--now", "docker"],
+        ],
+        "pacman" => vec![
+            vec!["pacman", "-S", "--needed", "--noconfirm", "docker"],
+            vec!["systemctl", "enable", "--now", "docker"],
+        ],
+        "zypper" => vec![
+            vec!["zypper", "install", "-y", "docker"],
+            vec!["systemctl", "enable", "--now", "docker"],
+        ],
+        "apk" => vec![
+            vec!["apk", "add", "docker"],
+            vec!["rc-update", "add", "docker", "default"],
+            vec!["rc-service", "docker", "start"],
+        ],
+        _ => vec![
+            vec!["apt-get", "update", "-qq"],
+            vec!["apt-get", "install", "-y", "docker.io"],
+        ],
+    }
+}
+
 /// Commande d'installation du runtime de conteneur, adaptee a l'OS.
 ///
 /// Elle est presentee a l'utilisateur AVANT execution : rien n'est installe
 /// automatiquement.
-pub fn install_runtime_hint(os: HostOs) -> &'static str {
+pub fn install_runtime_hint(os: HostOs) -> String {
     match os {
-        HostOs::Linux => "sudo apt-get update && sudo apt-get install -y docker.io",
-        HostOs::MacOs => "brew install --cask docker (ou colima + docker client)",
-        HostOs::Windows => "winget install --id Docker.DockerDesktop -e",
-        HostOs::Other => "installer Docker ou Podman pour votre systeme",
+        HostOs::Linux => format!(
+            "sudo {}",
+            linux_install_commands()
+                .iter()
+                .map(|c| c.join(" "))
+                .collect::<Vec<_>>()
+                .join(" && sudo ")
+        ),
+        HostOs::MacOs => {
+            "brew install --cask docker  (ou : brew install colima docker)".to_string()
+        }
+        HostOs::Windows => {
+            "winget install --id Docker.DockerDesktop -e --accept-source-agreements --accept-package-agreements"
+                .to_string()
+        }
+        HostOs::Other => "installer Docker ou Podman pour votre systeme".to_string(),
+    }
+}
+
+/// Commande a executer quand le runtime est installe mais que son demon est
+/// arrete : c'est le cas le plus courant sur Windows/macOS (Docker Desktop
+/// ferme) et il ne se regle pas en reinstalleant le paquet.
+pub fn daemon_start_hint(os: HostOs, runtime: &str) -> String {
+    match os {
+        HostOs::Windows => "demarrer Docker Desktop puis relancer l'assistant".to_string(),
+        HostOs::MacOs => "ouvrir Docker.app (open -a Docker) puis relancer l'assistant".to_string(),
+        HostOs::Linux => {
+            if runtime == "podman" {
+                "systemctl --user start podman.socket".to_string()
+            } else {
+                "sudo systemctl start docker".to_string()
+            }
+        }
+        HostOs::Other => format!("demarrer le service {runtime}"),
     }
 }
 
@@ -373,6 +533,44 @@ mod tests {
         for os in [HostOs::Linux, HostOs::MacOs, HostOs::Windows, HostOs::Other] {
             assert!(!install_runtime_hint(os).is_empty());
         }
+        assert!(install_runtime_hint(HostOs::Windows).contains("winget"));
+        assert!(install_runtime_hint(HostOs::MacOs).contains("brew"));
+    }
+
+    #[test]
+    fn le_demarrage_du_demon_est_guide_par_os() {
+        for os in [HostOs::Linux, HostOs::MacOs, HostOs::Windows] {
+            assert!(!daemon_start_hint(os, "docker").is_empty());
+        }
+        assert!(daemon_start_hint(HostOs::Linux, "docker").contains("systemctl"));
+        assert!(daemon_start_hint(HostOs::Linux, "podman").contains("podman.socket"));
+    }
+
+    #[test]
+    fn installation_linux_suit_le_gestionnaire_de_paquets() {
+        let cmds = linux_install_commands();
+        assert!(!cmds.is_empty());
+        // Le gestionnaire reel de la machine est celui de la premiere commande.
+        let first = cmds[0][0];
+        assert!(
+            ["apt-get", "dnf", "pacman", "zypper", "apk"].contains(&first),
+            "gestionnaire inattendu : {first}"
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn which_resout_les_binaires_avec_extension_windows() {
+        // cmd.exe n'est present que sous cette forme dans le PATH.
+        let found = which("cmd").expect("cmd.exe doit etre trouve via PATHEXT");
+        assert!(found.to_string_lossy().to_lowercase().ends_with("cmd.exe"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn which_ne_devine_pas_d_extension_hors_windows() {
+        assert!(which("sh").is_some());
+        assert!(which("sh.exe").is_none());
     }
 
     #[test]

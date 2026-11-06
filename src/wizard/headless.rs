@@ -14,8 +14,8 @@
 use crate::wizard::api;
 use std::io::{BufRead, Write};
 
-/// Caractere de fin de ligne adapte a la plateforme.
-const NL: &str = if cfg!(windows) { "\r\n" } else { "\n" };
+/// Fin de ligne unique (LF) : println! ajoute deja le CRLF du terminal Windows.
+const NL: &str = "\n";
 
 /// Bandeau d'en-tete.
 fn banner() {
@@ -59,6 +59,9 @@ fn show_diagnostic() {
             "incomplet"
         }
     );
+    if !d.container_runtime.is_empty() && !d.container_daemon_ready {
+        println!("Demon         : arrete — {}", d.daemon_start_hint);
+    }
     println!("{}Etapes :", NL);
     for s in &d.steps {
         println!("  [{}] {}", s.state.to_uppercase(), s.title);
@@ -119,7 +122,7 @@ pub fn run() -> i32 {
         );
         println!("{}  $ {}", NL, d.runtime_install.command);
         println!(
-            "{}Une fois installe, relancez : mcp-intruder-wizard --headless{}",
+            "{}Une fois installe, relancez : wizard --headless{}",
             NL, NL
         );
         if confirm("Tenter l'installation maintenant ?") {
@@ -146,7 +149,7 @@ pub fn run() -> i32 {
             );
             println!("{}  $ {}", NL, d2.image_pull.command);
             println!(
-                "{}Commande a executer apres installation du runtime, puis relancez mcp-intruder-wizard --headless{}",
+                "{}Commande a executer apres installation du runtime, puis relancez wizard --headless{}",
                 NL, NL
             );
             return 1;

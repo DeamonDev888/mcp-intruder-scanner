@@ -18,6 +18,23 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
   conteneur : docker run -p 7808:7808 mcp-intruder/server » sinon. Le serveur affiche au
   démarrage l'URL à déclarer dans le client.
 
+### Fixed
+- **Windows — détection de l'outillage** : la recherche dans le PATH résout `PATHEXT`
+  (`docker.exe`, `nmap.exe`…) au lieu de ne voir que les shims sans extension de Docker
+  Desktop. Un Docker installé par winget/Chocolatey est reconnu.
+- **Runtime installé vs démon arrêté** : `docker info` est sondé ; si le démon ne répond pas
+  (Docker Desktop fermé, service `docker` arrêté), l'étape passe en avertissement,
+  l'outillage n'est pas déclaré opérationnel et la consigne de démarrage adaptée à l'OS est
+  affichée. L'installation n'est plus relancée inutilement.
+- **Linux — gestionnaire de paquets** : `apt`, `dnf`, `pacman`, `zypper` ou `apk` est détecté
+  au lieu de proposer `apt-get` partout.
+- **Windows — winget** : `--accept-source-agreements` et `--accept-package-agreements`
+  ajoutés (sans quoi l'installation non interactive échoue).
+- **Nom affiché de l'assistant** : l'aide et les messages parlaient de
+  `mcp-intruder-wizard` alors que le binaire installé est `wizard`.
+- `wizard --port 0` n'affiche plus une URL en `:0` : le port effectif est annoncé après le
+  bind.
+
 ### Note
 - En natif, le serveur doit être lancé à la main ; en conteneur, il se lance tout seul avec
   le conteneur (y compris sous Windows : démarrer le conteneur suffit).

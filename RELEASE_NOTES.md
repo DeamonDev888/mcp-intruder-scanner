@@ -1,7 +1,7 @@
-## MCP Intruder v0.6.3 — binaires multi-OS
+## MCP Intruder v0.6.10 — binaires multi-OS
 
 Serveur Model Context Protocol offensif : expose le moteur de scan de surface
-(DNS, ports, TLS, HTTP, 39 modules lecture-seule) comme outils MCP
+(DNS, ports, TLS, HTTP, 39 modules lecture seule) comme outils MCP
 (Streamable HTTP, LiteMCP) + catalogue PostgreSQL.
 
 ### Binaires
@@ -13,52 +13,52 @@ Serveur Model Context Protocol offensif : expose le moteur de scan de surface
 | macOS x86_64 (Intel) | `mcp-intruder-macos-x86_64.tar.gz` |
 | Windows x86_64 | `mcp-intruder-windows-x86_64.zip` |
 
-Chaque archive contient `mcp_intruder` (CLI + TUI), `mcp_server` (serveur MCP
-Streamable HTTP), `LICENSE` et `README.md`.
+Chaque archive contient `mcp_intruder` (CLI + TUI), `mcp_intruder_server`
+(serveur MCP Streamable HTTP), `wizard` (assistant de configuration),
+`dashboard`, `LICENSE` et `README.md`.
 
-### Corrigé
+### Changement de nom
 
-- **Portabilité Windows/macOS** — `envx` et `gitdump` utilisaient
-  `std::os::unix::fs::PermissionsExt` hors bloc `#[cfg(unix)]` et écrivaient en
-  `/tmp/...` : le crate ne compilait pas sous Windows. Nouveau helper portable
-  `utils::write_private_file()` (mode 0600 sous Unix, ACL héritée sous Windows)
-  et chemin via `std::env::temp_dir()`.
-- **Schéma canonique** — `schema_full.sql` plaçait la virgule de séparation de
-  colonne après le commentaire inline, donc commentée par SQL : le
-  `CREATE TABLE audit_scans` échouait en erreur de syntaxe et le schéma ne
-  s'appliquait jamais sur une base vierge. Virgule repositionnée avant le
-  commentaire.
-- **Fixture de test** — la purge des données avait substitué `evil-exemple.ca`
-  par `evil.example.com`, qui est un sous-domaine valide de `example.com` (le
-  point est la frontière) : le test échouait à tort. Fixture restaurée en
-  `evil-example.com`.
+- **`mcp_server` devient `mcp_intruder_server`** : `mcp_server` est un nom
+  générique qui entrait en collision avec d'autres serveurs MCP de la machine.
+  Les archives, le `Dockerfile`, le wizard et le README suivent. Si un
+  déploiement existant appelle `mcp_server`, renommez le lien ou mettez à jour
+  la ligne de commande.
 
 ### Ajouté
 
-- CI multi-OS (clippy `-D warnings`, `cargo fmt --check`, tests, build release)
-  sur Linux, macOS et Windows.
-- Pipeline de release : publication automatique des 4 archives sur tag `v*`.
+- **Image serveur conteneurisée** : build multi-stage (Rust → image Kali avec
+  les 20 paquets), `ENTRYPOINT ["mcp_intruder_server"]` + `CMD ["--bind",
+  "0.0.0.0:7808"]`. Le serveur démarre avec le conteneur, sans commande.
+- **Assistant `wizard`** : diagnostic puis installation guidée du runtime de
+  conteneur et de l'image Kali, en mode graphique (page locale sur
+  `127.0.0.1:8098`) ou `--headless` pour un serveur sans bureau. La dernière
+  étape rappelle le geste adapté au mode : `mcp_intruder_server` en natif,
+  `docker run -p 7808:7808 mcp-intruder/server` en conteneur.
 
-### Installation rapide
+### Corrigé
 
-```bash
-tar -xzf mcp-intruder-linux-x86_64.tar.gz
-sudo cp mcp-intruder-linux-x86_64/mcp_intruder /usr/local/bin/
-sudo cp mcp-intruder-linux-x86_64/mcp_server  /usr/local/bin/
-```
-
-Serveur MCP :
-
-```bash
-mcp_server --bind 127.0.0.1:7808 --db mcp_intruder_audit
-# route MCP : http://127.0.0.1:7808/mcp
-# sonde de vie : http://127.0.0.1:7808/health
-```
-
-### Prérequis
-
-- PostgreSQL (socat/Unix socket) pour la persistance du catalogue — optionnel
-  via `--no-db`.
-- Outils Kali optionnels pour les modules enrichis : `nmap`, `nuclei`, `nikto`,
-  `wafw00f`, `whatweb`, `sslscan`, `ffuf`, `dnsrecon`, `theHarvester`,
-  `obscura`, `dig`, `curl`, `openssl`, `psql` + wordlists SecLists.
+- **Windows — détection de l'outillage** : le PATH ne contient pas
+  d'extension. La recherche d'un binaire résout désormais `PATHEXT`
+  (`docker.exe`, `nmap.exe`…) au lieu de ne voir que les shims sans extension
+  livrés par Docker Desktop. Un Docker installé par winget/Chocolatey est
+  maintenant reconnu.
+- **Runtime installé mais démon arrêté** : le wizard distinguait mal les deux
+  cas. `docker info` est sondé ; si le démon ne répond pas (Docker Desktop
+  fermé sous Windows/macOS, service arrêté sous Linux), l'étape passe en
+  avertissement, l'outillage n'est pas déclaré opérationnel et la consigne de
+  démarrage est affichée (`Docker Desktop`, `open -a Docker`,
+  `sudo systemctl start docker`). L'installation du runtime n'est plus
+  relancée inutilement.
+- **Linux — gestionnaire de paquets** : l'assistant proposait `apt-get` sur
+  toutes les distributions. Il détecte maintenant `apt`, `dnf`, `pacman`,
+  `zypper` ou `apk` et propose la commande correspondante.
+- **macOS** : la commande d'installation du cask est suivie d'une tentative de
+  démarrage de Docker.app ; `colima` est proposé en alternative.
+- **Windows — winget** : ajout de `--accept-source-agreements` et
+  `--accept-package-agreements`, sans quoi l'installation non interactive
+  échoue.
+- **Nom affiché de l'assistant** : l'aide et les messages parlaient de
+  `mcp-intruder-wizard` alors que le binaire installé est `wizard`.
+- `wizard --port 0` n'affiche plus une URL en `:0` : le port effectif est
+  annoncé après le bind.

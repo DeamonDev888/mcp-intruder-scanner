@@ -249,7 +249,8 @@ cargo install mcp_intruder   # moteur + serveur + wizard
 wizard                        # Docker, image Kali, 20 outils, puis commande de lancement
 ```
 
-Le wizard détecte la plateforme (Windows, Linux, macOS, Kali natif), installe ce qui manque et
+Le wizard détecte la plateforme (Windows, Linux, macOS, Kali natif), installe ce qui manque
+(gestionnaire de paquets réel sous Linux, winget sous Windows, cask Docker sous macOS) et
 rappelle à la fin la commande exacte à lancer — `mcp_intruder_server` en natif, `docker run …`
 en conteneur. La suite de cette section est la procédure manuelle.
 
@@ -414,8 +415,8 @@ cargo install mcp_intruder
 
 > Toutes les versions : <https://github.com/DeamonDev888/mcp-intruder-scanner/releases>
 
-Sur un hôte non-Kali, lancez l'assistant (GUI : `mcp-intruder-wizard`,
-headless : `mcp-intruder-wizard --headless`) ou laissez le fallback Docker
+Sur un hôte non-Kali, lancez l'assistant (`wizard`, ou `wizard --headless`
+sur un serveur sans bureau) ou laissez le fallback Docker
 installer l'outillage au premier scan.
 
 ### Pilotage avancé (jobs)
