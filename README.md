@@ -31,10 +31,18 @@
 ### 1. Démarrer le serveur
 
 ```bash
-mcp_server --bind 127.0.0.1:7808 --db mcp_intruder_audit
-# MCP   : http://127.0.0.1:7808/mcp
-# Santé : http://127.0.0.1:7808/health   -> ok
+mcp_server
 ```
+
+C'est tout : il écoute sur **http://127.0.0.1:7808/mcp** (santé : `/health`) avec la base
+`mcp_intruder_audit`. Les deux options qui suivent n'existent que pour changer ces défauts :
+
+```bash
+mcp_server --bind 127.0.0.1:9000 --db ma_base    # autre port / autre base
+```
+
+Si l'outillage n'est pas encore installé, lancez `wizard` **une fois** : il prépare
+l'environnement (Docker + outils Kali), ensuite `mcp_server` suffit.
 
 Les réponses sont du JSON, ou du SSE (`text/event-stream`) : le client doit envoyer
 `Accept: application/json, text/event-stream`.

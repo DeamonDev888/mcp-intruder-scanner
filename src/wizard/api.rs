@@ -126,7 +126,7 @@ pub fn diagnose_platform(p: &Platform) -> Diagnostic {
         id: "verify",
         title: "Outillage operationnel",
         detail: if tools_ready {
-            "Les modules de scan peuvent s'executer.".to_string()
+            "Les modules de scan peuvent s'executer. Demarrer le serveur : mcp_server".to_string()
         } else {
             "En attente de la resolution des etapes precedentes.".to_string()
         },

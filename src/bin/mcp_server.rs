@@ -39,6 +39,10 @@ fn main() -> std::io::Result<()> {
     eprintln!("[MCP] URL MCP      : http://{}/mcp", args.bind);
     eprintln!("[MCP] Sonde de vie : http://{}/health", args.bind);
     eprintln!("[MCP] PostgreSQL   : base '{}'", args.db);
+    eprintln!(
+        "[MCP] Client       : ajoutez http://{}/mcp dans Claude Code, Hermes ou GrokBot",
+        args.bind
+    );
 
     mcp_intruder::mcp::build_server_with_db(&args.db)
         .bind(&args.bind)?
