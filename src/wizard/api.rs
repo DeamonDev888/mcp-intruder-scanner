@@ -384,7 +384,9 @@ mod tests {
     fn etape_image_reflete_la_presence_de_l_image() {
         let d = diagnose();
         let p = Platform::detect();
-        if p.kali_image_present || p.is_native_kali {
+        // L'etape image est "done" quand l'image DERIVEE existe (base + outils),
+        // pas seulement l'image de base Kali.
+        if p.derived_image_present || p.is_native_kali {
             assert_eq!(d.steps[2].state, "done");
         } else {
             assert_eq!(d.steps[2].state, "todo");
