@@ -39,9 +39,12 @@ fn main() -> std::io::Result<()> {
     eprintln!("[MCP] URL MCP      : http://{}/mcp", args.bind);
     eprintln!("[MCP] Sonde de vie : http://{}/health", args.bind);
     eprintln!("[MCP] PostgreSQL   : base '{}'", args.db);
+    // 0.0.0.0 n'est pas une adresse joignable par un client : on affiche
+    // loopback dans ce cas (cas typique du conteneur).
+    let client_addr = args.bind.replace("0.0.0.0", "127.0.0.1");
     eprintln!(
         "[MCP] Client       : ajoutez http://{}/mcp dans Claude Code, Hermes ou GrokBot",
-        args.bind
+        client_addr
     );
 
     mcp_intruder::mcp::build_server_with_db(&args.db)
