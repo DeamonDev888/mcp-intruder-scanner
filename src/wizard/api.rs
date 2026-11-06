@@ -58,7 +58,10 @@ pub fn diagnose() -> Diagnostic {
 
 /// Variante testable : diagnostic a partir d'une plateforme connue.
 pub fn diagnose_platform(p: &Platform) -> Diagnostic {
-    let tools_ready = p.is_native_kali || (p.kali_image_present && !p.container_runtime.is_empty());
+    // L'outillage n'est pret que si l'image DERIVEE existe (base + paquets),
+    // pas seulement l'image de base Kali.
+    let tools_ready =
+        p.is_native_kali || (p.derived_image_present && !p.container_runtime.is_empty());
 
     let mut steps = Vec::new();
 
@@ -94,13 +97,18 @@ pub fn diagnose_platform(p: &Platform) -> Diagnostic {
     });
 
     // Etape 3 : image Kali.
-    let image_state = if p.kali_image_present || p.is_native_kali {
+    let image_state = if p.derived_image_present || p.is_native_kali {
         "done"
     } else {
         "todo"
     };
-    let image_detail = if p.kali_image_present {
-        format!("Image presente : {KALI_IMAGE}")
+    let image_detail = if p.derived_image_present {
+        format!(
+            "Image d'outillage presente : {}",
+            crate::docker_tools::DERIVED_IMAGE
+        )
+    } else if p.kali_image_present {
+        format!("Base presente ({KALI_IMAGE}) ; outillage construit au premier scan.")
     } else if p.is_native_kali {
         "Inutile : Kali natif, pas de conteneur requis.".to_string()
     } else {

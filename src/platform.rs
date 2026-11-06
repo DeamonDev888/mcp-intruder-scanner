@@ -72,8 +72,10 @@ pub struct Platform {
     pub container_runtime: String,
     /// Version du runtime si presente.
     pub container_version: String,
-    /// L'image Kali est deja presente localement (runtime disponible).
+    /// L'image Kali de base est deja presente localement (runtime disponible).
     pub kali_image_present: bool,
+    /// L'image derivee (base + outillage installe) est deja construite.
+    pub derived_image_present: bool,
     /// Les outils Kali sont deja installes nativement.
     pub native_tools_present: bool,
 }
@@ -109,6 +111,11 @@ impl Platform {
         } else {
             image_present(&container_runtime)
         };
+        let derived_image_present = if container_runtime.is_empty() {
+            false
+        } else {
+            has_derived_image(&container_runtime)
+        };
 
         Self {
             os,
@@ -117,6 +124,7 @@ impl Platform {
             container_runtime,
             container_version,
             kali_image_present,
+            derived_image_present,
             native_tools_present,
         }
     }
@@ -250,6 +258,16 @@ fn image_present(runtime: &str) -> bool {
     run_capture(runtime, &["images", "-q", KALI_IMAGE])
         .map(|o| !o.trim().is_empty())
         .unwrap_or(false)
+}
+
+/// L'image derivee (base + outillage installe) est-elle construite ?
+fn has_derived_image(runtime: &str) -> bool {
+    run_capture(
+        runtime,
+        &["images", "-q", crate::docker_tools::DERIVED_IMAGE],
+    )
+    .map(|o| !o.trim().is_empty())
+    .unwrap_or(false)
 }
 
 /// Execute une commande sans shell et capture stdout+stderr.

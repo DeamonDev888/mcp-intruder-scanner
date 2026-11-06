@@ -14,6 +14,12 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
   bootstrap utilise désormais un conteneur persistant, vérifie son code de sortie réel
   (`docker inspect .State.ExitCode`) puis le `commit` en `mcp-intruder/kali-tools:latest`.
 
+### Fixed
+- **Wizard / diagnostic : « outillage opérationnel » était faux.** `tools_ready` se basait sur
+  la présence de l'image de base Kali, pas sur l'image dérivée contenant les paquets. Le
+  diagnostic s'appuie désormais sur `Platform::derived_image_present` et distingue « base
+  présente, outillage à construire » de « image d'outillage présente ».
+
 ### Changed
 - **Outillage conteneur complet** : `rustscan`, `sqlmap`, `subfinder`, `httpx-toolkit` et
   `nuclei` rejoignent les 15 paquets existants (20 au total). Les quatre « dépendances
