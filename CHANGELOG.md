@@ -13,6 +13,11 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - **Image serveur conteneurisée** (`Dockerfile`) : build multi-stage (Rust → image Kali
   avec les 20 paquets), `ENTRYPOINT ["mcp_intruder_server"]` + `CMD ["--bind",
   "0.0.0.0:7808"]`. Le serveur démarre donc **avec le conteneur**, sans commande.
+- **Assistant natif** : `wizard` est un programme de console, plus une page web. Le serveur
+  HTTP local (`127.0.0.1:8098`) et les modules `server`/`ui` sont supprimés. Menu interactif
+  (actions limitées à ce qui est utile, exécution après choix, rafraîchissement), mode
+  rapport `--headless` pour la CI et les serveurs sans terminal, `--pause` pour le lancement
+  par double-clic. Même comportement sous Windows, macOS et Linux.
 - Le wizard (diagnostic et mode headless) termine désormais par le geste adapté au mode :
   « Démarrer le serveur MCP : mcp_intruder_server » en natif, « Le serveur démarre avec le
   conteneur : docker run -p 7808:7808 mcp-intruder/server » sinon. Le serveur affiche au
@@ -32,8 +37,6 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
   ajoutés (sans quoi l'installation non interactive échoue).
 - **Nom affiché de l'assistant** : l'aide et les messages parlaient de
   `mcp-intruder-wizard` alors que le binaire installé est `wizard`.
-- `wizard --port 0` n'affiche plus une URL en `:0` : le port effectif est annoncé après le
-  bind.
 
 ### Note
 - En natif, le serveur doit être lancé à la main ; en conteneur, il se lance tout seul avec

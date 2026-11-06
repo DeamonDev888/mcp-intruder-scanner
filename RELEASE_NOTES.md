@@ -30,11 +30,13 @@ Chaque archive contient `mcp_intruder` (CLI + TUI), `mcp_intruder_server`
 - **Image serveur conteneurisée** : build multi-stage (Rust → image Kali avec
   les 20 paquets), `ENTRYPOINT ["mcp_intruder_server"]` + `CMD ["--bind",
   "0.0.0.0:7808"]`. Le serveur démarre avec le conteneur, sans commande.
-- **Assistant `wizard`** : diagnostic puis installation guidée du runtime de
-  conteneur et de l'image Kali, en mode graphique (page locale sur
-  `127.0.0.1:8098`) ou `--headless` pour un serveur sans bureau. La dernière
-  étape rappelle le geste adapté au mode : `mcp_intruder_server` en natif,
-  `docker run -p 7808:7808 mcp-intruder/server` en conteneur.
+- **Assistant `wizard` natif** : programme de console, identique sous Windows,
+  macOS et Linux (y compris un serveur sans affichage). Diagnostic des quatre
+  étapes, menu d'actions limité à ce qui est utile, exécution après un choix
+  explicite, puis rappel des commandes de lancement. Aucun serveur HTTP, aucune
+  page web, aucun navigateur. `--headless` produit le rapport et les commandes
+  exactes sans interaction ; `--pause` attend Entrée avant de fermer (lancement
+  par double-clic).
 
 ### Corrigé
 
@@ -60,5 +62,9 @@ Chaque archive contient `mcp_intruder` (CLI + TUI), `mcp_intruder_server`
   échoue.
 - **Nom affiché de l'assistant** : l'aide et les messages parlaient de
   `mcp-intruder-wizard` alors que le binaire installé est `wizard`.
-- `wizard --port 0` n'affiche plus une URL en `:0` : le port effectif est
-  annoncé après le bind.
+
+### Retiré
+
+- **Mode web du wizard** (page servie sur `127.0.0.1:8098`, modules `server` et
+  `ui`) : supprimé. L'assistant est un programme de console natif, identique
+  sur les trois systèmes. `--port` et `--no-browser` n'existent plus.
