@@ -16,8 +16,7 @@
 # 🛡️ MCP INTRUDER
 
 > **Moteur modulaire d'audit de sécurité offensif et de cartographie de surface d'attaque.**
-> Conçu pour être exécuté aussi bien par un **opérateur humain** (TUI interactif) que par une **super-intelligence** :
-> agent IA autonome branché en natif sur le protocole **MCP** (Model Context Protocol), servi par [LiteMCP](https://github.com/DeamonDev888/litemcp).
+> Conçu pour être exécuté aussi bien par un **opérateur humain** (TUI interactif) que par une **super-intelligence** branchée en natif sur le protocole servi par [LiteMCP](https://github.com/DeamonDev888/litemcp).
 
 ---
 
