@@ -85,7 +85,7 @@ impl FullPortScanner {
                                                           // sur tous les ports non exposes MAIS laisse passer les services
                                                           // reels : le ratio de timeouts est alors eleve SANS que la cible
                                                           // soit muette. On compte les ouverts pour ne pas confondre les deux
-                                                          // (bug live 2026-11-06 sur 51.38.227.7 : bail-out a 6560 sondes,
+                                                          // (bug live 2026-11-06 sur 192.0.2.10 : bail-out a 6560 sondes,
                                                           // ports 8443/8444 jamais sondes alors qu'ils sont ouverts).
         let opens_found = Arc::new(AtomicU64::new(0));
 
