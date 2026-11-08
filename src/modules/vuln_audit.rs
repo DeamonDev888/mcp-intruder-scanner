@@ -90,7 +90,13 @@ impl VulnAuditor {
             Self::check_libraries(&html_content, &mut res);
 
             // B. Vérification de Subresource Integrity (SRI)
-            Self::check_sri(&html_content, &mut res);
+            //    On passe l'hôte de la cible : les ressources same-origin
+            //    (scripts WordPress servis par le domaine lui-même) ne sont
+            //    pas concernées par SRI et ne doivent pas être comptées.
+            let sri_host = crate::utils::split_host_port(&hostport)
+                .map(|(h, _)| h)
+                .unwrap_or_else(|| hostport.clone());
+            Self::check_sri(&html_content, &sri_host, &mut res);
 
             // C. Vérification de Contenu Mixte (Mixed Content)
             Self::check_mixed_content(&html_content, &mut res);
@@ -150,43 +156,99 @@ impl VulnAuditor {
         }
     }
 
-    fn check_sri(html: &str, res: &mut VulnAuditResult) {
-        let cdns = [
-            "cdnjs.cloudflare.com",
-            "cdn.jsdelivr.net",
-            "unpkg.com",
-            "stackpath.bootstrapcdn.com",
-            "code.jquery.com",
-        ];
+    /// Deux hôtes appartiennent-ils au même site (sous-domaines inclus) ?
+    /// Comparaison par SUFFIXE sur frontière de label : `blog.exemple.com`
+    /// et `www.exemple.com` -> vrai ; `pasunexemple.com` et `exemple.com`
+    /// -> faux (le suffixe naïf `exemple.com` matcherait à tort).
+    fn is_same_site(host: &str, target: &str) -> bool {
+        if host == target {
+            return true;
+        }
+        host.len() > target.len()
+            && host.ends_with(target)
+            && host.as_bytes()[host.len() - target.len() - 1] == b'.'
+    }
 
-        // Regex stricte : <script src="https://cdn..."> ou <link href="https://cdn...">
+    /// Contrôle SRI (Subresource Integrity).
+    ///
+    /// Règle : SRI ne protège que les ressources **tierces**. Une ressource
+    /// servie par l'hôte cible (même nom de domaine, y compris www/apex)
+    /// est déjà dans le périmètre de confiance du navigateur — exiger un
+    /// `integrity` dessus n'a aucun sens et produit un faux positif.
+    ///
+    /// L'ancienne implémentation ne comptait que cinq CDN codés en dur
+    /// (cdnjs, jsdelivr, unpkg…) : un site chargeant un CDN différent
+    /// (Google Fonts, bootstrapcdn, un CDN maison) passait sous le radar,
+    /// tandis qu'une implémentation antérieure plus naïve comptait tous les
+    /// scripts externes — y compris les scripts same-origin d'un WordPress —
+    /// et sortait un « 3 scripts sans SRI » sur une cible parfaitement
+    /// conforme (cas réel : example-target.com, 2026-11-06).
+    ///
+    /// On compare donc l'hôte de l'URL au nom d'hôte de la cible.
+    fn check_sri(html: &str, target_host: &str, res: &mut VulnAuditResult) {
+        // Regex stricte : <script src="https://..."> ou <link href="https://...">
         // Capture le tag complet pour vérifier la présence d'integrity= dans le même tag.
         let tag_re = Regex::new(
             r#"<(?:script|link)\b[^>]*?\s(?:src|href)\s*=\s*["'](https?://[^"']+)["'][^>]*>"#,
         )
         .unwrap();
 
+        // Hôtes de référence : nom exact + variante www. de la cible.
+        // Le même-site est ensuite testé par SUFFIXE sur frontière de label :
+        // `blog.exemple.com` est same-origin de `www.exemple.com`, mais
+        // `pasunexemple.com` ne l'est PAS (suffixe naïf = faux positif).
+        let target = target_host.to_lowercase();
+        let target_no_www = target.strip_prefix("www.").unwrap_or(&target);
+
+        let mut seen_hosts: Vec<String> = Vec::new();
         for cap in tag_re.captures_iter(html) {
             let url = cap[1].to_lowercase();
             let tag = &cap[0];
-            for cdn in &cdns {
-                if url.contains(cdn) {
-                    res.cdn_scripts_count += 1;
-                    if !tag.contains("integrity=") {
-                        res.missing_sri_count += 1;
-                    }
-                    break;
-                }
+
+            // Extraction de l'hôte de l'URL (sans userinfo, sans port).
+            let host = url
+                .split_once("://")
+                .map(|(_, rest)| rest.split(['/', '?', '#']).next().unwrap_or(""))
+                .unwrap_or("")
+                .split('@')
+                .next_back()
+                .unwrap_or("")
+                .split(':')
+                .next()
+                .unwrap_or("")
+                .to_string();
+            if host.is_empty() {
+                continue;
+            }
+
+            // Same-origin (y compris www/apex et sous-domaines du même
+            // site) : hors périmètre SRI, on ne compte pas.
+            let host_no_www = host.strip_prefix("www.").unwrap_or(&host);
+            let same_site = host == target
+                || host_no_www == target_no_www
+                || Self::is_same_site(host_no_www, target_no_www);
+            if same_site {
+                continue;
+            }
+
+            // Ressource tierce : comptée une seule fois par hôte.
+            if !seen_hosts.contains(&host) {
+                seen_hosts.push(host.clone());
+            }
+            res.cdn_scripts_count += 1;
+            if !tag.contains("integrity=") {
+                res.missing_sri_count += 1;
             }
         }
 
         if res.missing_sri_count > 0 {
+            let hosts = seen_hosts.join(", ");
             res.findings.push(VulnFinding {
                 id: "vuln-sri-missing".into(),
                 severity: "MEDIUM",
                 category: "SRI",
                 title: format!("{} script(s) externe(s) CDN sans attribut Subresource Integrity (SRI)", res.missing_sri_count),
-                description: "Les ressources chargées depuis un CDN tiers ne possèdent pas l'attribut d'intégrité cryptographique. Si le CDN est compromis, un attaquant pourrait injecter du code malveillant.".into(),
+                description: format!("Les ressources chargées depuis un hôte tiers ({hosts}) ne possèdent pas l'attribut d'intégrité cryptographique. Si ce tiers est compromis, un attaquant pourrait injecter du code malveillant dans la page."),
                 fix: "Ajouter l'attribut integrity=\"sha384-...\" et crossorigin=\"anonymous\" sur toutes les balises <script> et <link> externes.".into(),
                 owasp: "A08:2021 - Software and Data Integrity Failures",
             });

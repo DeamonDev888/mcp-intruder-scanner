@@ -7,16 +7,36 @@ use std::time::Duration;
 /// Catalogue étendu des 75 ports d'infrastructure, web, bases de données et services distants les plus critiques
 pub const EXTENDED_TARGET_PORTS: &[u16] = &[
     // Web & Proxies
-    80, 443, 8000, 8008, 8080, 8443, 8888, 9000, 9090, 9443, 10000,
-    // Accès distant & Administration
+    80, 443, 8000, 8008, 8080, 8443, 8444, 8888, 9000, 9090, 9443, 10000,
+    // Acces distant & Administration
     21, 22, 23, 2222, 3389, 5900, 5901, // Messagerie
-    25, 110, 143, 465, 587, 993, 995, 2525, // Infrastructure & Réseau
-    53, 67, 68, 69, 123, 161, 162, 389, 636, 873, // Bases de données & Cache
+    25, 110, 143, 465, 587, 993, 995, 2525, // Infrastructure & Reseau
+    53, 67, 68, 69, 123, 161, 162, 389, 636, 873, // Bases de donnees & Cache
     1433, 1521, 2049, 3306, 5432, 5984, 6379, 7474, 9200, 9300, 11211, 27017, 28017,
     // Conteneurs & Orchestration
     2375, 2376, 2379, 2380, 6443, 10250, // Queues & Bus de messages
     5672, 15672, 9092, // Outils Dev & CI/CD
     3000, 5000, 8081, 8161, 8880, 9001,
+    // Bandes de services alternatifs.
+    //
+    // Le catalogue listait 8443 mais PAS 8444 : un port TLS ouvert sur 8444
+    // etait invisible (absent du rapport, d'audit_ports et du score) alors
+    // que nmap -p- le voyait immediatement. Cas reel : un VPS OVH qui
+    // exposait 8443 ET 8444 avec un certificat auto-signe - seul 8443
+    // remontait dans le rapport.
+    //
+    // On couvre les bandes ou vivent les services web secondaires :
+    // alt-HTTPS, panels mutualises (cPanel/WHM, Plesk, Webmin), SSH/Web
+    // alternatifs et consoles d'observabilite.
+    8001, 8002, 8003, 8004, 8005, 8006, 8007, 8009, 8010, 8042, 8043, 8044, 8082, 8083, 8084, 8085,
+    8086, 8087, 8088, 8089, 8091, 8092, 8093, 8094, 8095, 8096, 8097, 8098, 8099, 8180, 8280, 8380,
+    8441, 8442, 8445, 8446, 8447, 8448, 8449, 8450, 8500, 8501, 8600, 8800, 8899, 9002, 9003, 9009,
+    9010, 9080, 9081, 9440, 9441, 9442, 9800, 9980, 10001, 10002, 10003, 10004, 10005, 10006,
+    10007, 10008, 10009, 10010, 10011, 10012, 10013, 10014, 10015, 10016, 10017, 10018, 10019,
+    10020, // Panels d'administration mutualises (cPanel/WHM/Plesk/Webmin)
+    2082, 2083, 2084, 2086, 2087, 2088, 2095, 2096, 2097, 2098, 2099, 3128, 7080, 7081, 7082, 7083,
+    7084, 7085, 7086, // Observabilite & caches
+    11212, 15673, 16686, 19000, 19999, 24224, 28015, 32768, 6400, 9091, 9093, 9094, 9418,
 ];
 
 #[allow(dead_code)]

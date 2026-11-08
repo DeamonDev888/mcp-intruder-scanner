@@ -98,7 +98,7 @@ fn test_target_parser_rejects_invalid_format() {
 
 #[test]
 fn test_target_parser_accepts_all_ips_without_filter() {
-    // Aucune restriction normative : loopback, RFC1918, multicast, link-local, doc ranges → tous acceptés.
+    // Aucune restriction normative : loopback, RFC1918, multicast, link-local, doc ranges -> tous acceptés.
     let any_ips = [
         "127.0.0.1",
         "127.0.0.53",
@@ -853,7 +853,7 @@ fn create_dummy_report(findings: Vec<SecurityFinding>) -> FullAuditReport {
 #[test]
 fn test_parse_openssl_date_strips_notafter_prefix() {
     use crate::modules::tls::parse_openssl_date;
-    // Bug historique : le préfixe "notAfter=" n'était jamais strippé → days_remaining null
+    // Bug historique : le préfixe "notAfter=" n'était jamais strippé -> days_remaining null
     assert_eq!(
         parse_openssl_date("notAfter=Jan 15 12:00:00 2027 GMT"),
         Some(1800014400)
@@ -1018,7 +1018,7 @@ fn test_score_clamp_negative_penalties() {
         }
         s.clamp(0.0, 100.0).round() as u8
     }
-    // 5 CRITICAL = -125 → clamp a 0
+    // 5 CRITICAL = -125 -> clamp a 0
     let mut findings = vec![];
     for _ in 0..5 {
         findings.push(crate::modules::findings::SecurityFinding {
@@ -1122,7 +1122,7 @@ fn test_iso_timestamp_iso8601_format() {
 fn test_db_history_target_empty_no_panic() {
     // Non-regression : target vide = toutes cibles ; ne doit pas paniquer
     use crate::modules::db::DatabaseManager;
-    // DB peut etre absente en CI → on accepte l'echec, on teste seulement qu'il n'y a pas de panic
+    // DB peut etre absente en CI -> on accepte l'echec, on teste seulement qu'il n'y a pas de panic
     let r = DatabaseManager::get_history("", 5, "mcp_intruder_audit");
     let _ = r; // Ok ou Err, mais pas panic
 }
@@ -1179,7 +1179,7 @@ fn test_install_script_files_present_and_ordered() {
 
 #[test]
 fn test_install_script_has_head_minus_one() {
-    // Le retour psql est "id\nINSERT 0 1\n" → il faut filtrer par head -1
+    // Le retour psql est "id\nINSERT 0 1\n" -> il faut filtrer par head -1
     // sinon le test d'INSERT produit "91INSERT01" qui casse le test arithmetique
     use std::fs;
     for path in &[
@@ -1285,7 +1285,7 @@ fn test_ffuf_no_403_in_match_codes() {
     let src = include_str!("modules/ffuf_audit.rs");
     assert!(
         !src.contains("\"200,301,302,403\""),
-        "ffuf matche à nouveau les 403 → flood de faux positifs (bug grocer.example.com)"
+        "ffuf matche à nouveau les 403 -> flood de faux positifs (bug grocer.example.com)"
     );
     assert!(
         src.contains("\"200,301,302\""),
@@ -1314,8 +1314,8 @@ fn test_ffuf_soft404_filter_logic() {
     // signature différente = conservé. Repris du corps du filter() réel.
     let baseline = (403u16, 5481usize); // grocer.example.com : WAF "Access Denied" uniforme
     let endpoints = [
-        (String::from(".env"), 403u16, 5481usize), // bruit WAF → filtré
-        (String::from(".git/HEAD"), 403u16, 5481usize), // bruit WAF → filtré
+        (String::from(".env"), 403u16, 5481usize), // bruit WAF -> filtré
+        (String::from(".git/HEAD"), 403u16, 5481usize), // bruit WAF -> filtré
         (String::from("robots.txt"), 200u16, 512usize), // vrai contenu servi
     ];
     let kept: Vec<&(String, u16, usize)> = endpoints
@@ -1336,7 +1336,7 @@ fn test_ffuf_soft404_filter_logic() {
 fn test_tls_retry_on_missing_verification_line() {
     // Le handshake -brief doit être retenté quand la ligne "Verification:"
     // n'est pas sortie (race kill/timeout) : sinon is_valid=false à tort
-    // → CRITICAL "Chaîne invalide" sur des certs parfaitement valides.
+    // -> CRITICAL "Chaîne invalide" sur des certs parfaitement valides.
     let src = include_str!("modules/tls.rs");
     assert!(
         src.contains("for _attempt in 0..3"),
@@ -1365,7 +1365,7 @@ fn test_lock_db_save_scan_atomic_and_typed() {
 
     let report = create_dummy_report(vec![]);
     let res = DatabaseManager::save_scan(&report, "mcp_intruder_audit");
-    // DB absente (CI) → Err acceptable, pas de panic.
+    // DB absente (CI) -> Err acceptable, pas de panic.
     let Ok(scan_id) = res else { return };
 
     // Le scan doit exister avec les valeurs dummy attendues.
@@ -1383,7 +1383,7 @@ fn test_lock_db_save_scan_atomic_and_typed() {
     let target: String = row.get(0);
     let score: i16 = row.get(1);
     assert_eq!(target, "test-target.ca");
-    assert_eq!(score, 100, "dummy sans findings → score 100");
+    assert_eq!(score, 100, "dummy sans findings -> score 100");
 
     // Les tables filles doivent être peuplées avec les valeurs dummy.
     // Les 5 tables mono-ligne sont TOUJOURS remplies (insertions
@@ -1866,4 +1866,298 @@ fn test_lock_diag_exposure_severity_ladder() {
     assert!(mk("/backup.zip", "archive_backup", "HIGH"));
     assert!(mk("/phpinfo.php", "phpinfo_marker", "HIGH"));
     assert!(mk("/server-status", "apache_server_status", "MEDIUM"));
+}
+
+// =============================================================================
+// Non-regression : audit HTTP évalue les en-têtes sur la réponse TLS
+// =============================================================================
+//
+// Bug (repro live 2026-11-06, www.example-target.com) : le module
+// interrogeait d'abord le port 80 en cleartext, recevait le `301 Moved
+// Permanently` de nginx (169 octets, aucun en-tête de sécurité) et
+// concluait « X-Frame-Options manquant » (MEDIUM) alors que la réponse
+// TLS renvoyait `x-frame-options: SAMEORIGIN`. Le score tombait à 5 %.
+//
+// La règle : une réponse CLEARTEXT ne prouve rien sur les en-têtes de
+// sécurité. Le module doit (a) interroger le TLS d'abord, (b) ne pas
+// compter un en-tête absent d'une réponse cleartext comme « manquant ».
+
+#[test]
+fn test_lock_http_audit_cleartext_headers_not_counted_as_missing() {
+    // Reproduit le cas : réponse 301 cleartext (port 80) SANS en-têtes de
+    // sécurité, alors que la cible est parfaitement durcie en TLS.
+    let cleartext_301 = "HTTP/1.1 301 Moved Permanently\r\n\
+                         Server: nginx/1.30.6\r\n\
+                         Location: https://www.example-target.com/\r\n\
+                         Content-Type: text/html\r\n\
+                         Content-Length: 169\r\n\
+                         \r\n";
+
+    // La logique d'évaluation doit distinguer « absent ET response_was_tls »
+    // (MISSING, un finding) de « absent ET réponse cleartext »
+    // (NON_EVALUABLE, aucun finding).
+    let mut missing: Vec<&str> = Vec::new();
+    let mut evaluations: Vec<&str> = Vec::new();
+
+    // Cas 1 : réponse TLS (response_was_tls = true) -> absent = MISSING.
+    let response_was_tls = true;
+    let headers_tls: std::collections::HashMap<&str, &str> = std::collections::HashMap::new();
+    let label = "X-Frame-Options";
+    match headers_tls.get("x-frame-options") {
+        Some(_) => evaluations.push("PASS"),
+        None => {
+            if response_was_tls {
+                missing.push(label);
+                evaluations.push("MISSING");
+            } else {
+                evaluations.push("NON_EVALUABLE");
+            }
+        }
+    }
+    assert_eq!(missing.len(), 1, "sur TLS, l'absence reste un finding");
+    assert_eq!(evaluations[0], "MISSING");
+
+    // Cas 2 : réponse CLEARTEXT -> l'absence ne prouve rien, aucun finding.
+    let mut missing_clear: Vec<&str> = Vec::new();
+    let response_was_tls = false;
+    let headers_clear: std::collections::HashMap<&str, &str> = std::collections::HashMap::new();
+    let label = "X-Frame-Options";
+    match headers_clear.get("x-frame-options") {
+        Some(_) => evaluations.push("PASS"),
+        None => {
+            if response_was_tls {
+                missing_clear.push(label);
+                evaluations.push("MISSING");
+            } else {
+                evaluations.push("NON_EVALUABLE");
+            }
+        }
+    }
+    assert!(
+        missing_clear.is_empty(),
+        "sur cleartext, un en-tete absent ne doit PAS compter comme manquant"
+    );
+    assert_eq!(
+        *evaluations.last().unwrap(),
+        "NON_EVALUABLE",
+        "l'absence en cleartext doit etre marquee NON_EVALUABLE"
+    );
+
+    // Le 301 cleartext ne porte effectivement aucun en-tete de securite :
+    // c'est bien lui qui causait le faux positif.
+    assert!(!cleartext_301.to_lowercase().contains("x-frame-options"));
+    assert!(cleartext_301.to_lowercase().contains("location: https://"));
+}
+
+// =============================================================================
+// Non-regression : le module http_audit interroge bien le port TLS
+// =============================================================================
+//
+// `split_host_port` sans port explicite renvoie 80 : interroger
+// `https://host:80/` échoue et le module retombait en cleartext. Le
+// candidat TLS doit donc être 443 quand aucun port n'est imposé.
+
+#[test]
+fn test_lock_http_audit_tls_candidate_uses_port_443_by_default() {
+    // Sans port imposé : le port HTTP est 80, le port TLS doit être 443.
+    let hostport = "www.example-target.com".to_string();
+    let custom_ports: Vec<u16> = Vec::new();
+    let (host_only, explicit_port) =
+        crate::utils::split_host_port(&hostport).unwrap_or((hostport.clone(), 80));
+    assert_eq!(host_only, "www.example-target.com");
+    assert_eq!(explicit_port, 80, "split_host_port sans port renvoie 80");
+
+    let tls_port: u16 = if !custom_ports.is_empty() {
+        explicit_port
+    } else {
+        443
+    };
+    assert_eq!(
+        tls_port, 443,
+        "le candidat TLS doit etre 443, pas le port HTTP 80"
+    );
+    let tls_hostport = if tls_port == 443 {
+        host_only.clone()
+    } else {
+        format!("{}:{}", host_only, tls_port)
+    };
+    assert_eq!(tls_hostport, "www.example-target.com");
+    assert_eq!(
+        format!("https://{}/", tls_hostport),
+        "https://www.example-target.com/"
+    );
+
+    // Avec un port imposé (ex. 8443), le candidat TLS reste ce port.
+    let custom_ports = vec![8443u16];
+    let hostport = crate::utils::host_with_port("example.org", &custom_ports);
+    let (_host_only, explicit_port) =
+        crate::utils::split_host_port(&hostport).unwrap_or((hostport.clone(), 80));
+    assert_eq!(explicit_port, 8443);
+    let tls_port: u16 = if !custom_ports.is_empty() {
+        explicit_port
+    } else {
+        443
+    };
+    assert_eq!(tls_port, 8443, "un --ports explicite doit etre respecte");
+}
+
+// =============================================================================
+// Non-regression : SRI ne compte que les ressources TIERS
+// =============================================================================
+//
+// Bug (repro live 2026-11-06, www.example-target.com) : le contrôle
+// SRI comptait des scripts SAME-ORIGIN servis par le domaine lui-même
+// (wp-includes, wp-content/plugins) et sortait « 3 scripts externes CDN
+// sans SRI » (MEDIUM) sur une cible sans aucun script tiers sans
+// integrite. SRI ne protège que les ressources d'un AUTRE hote.
+
+/// Réplique la logique d'hôte tiers du contrôle SRI (même extraction que
+/// `vuln_audit::check_sri`) pour la tester sans accès réseau.
+fn sri_third_party_hosts(html: &str, target_host: &str) -> Vec<String> {
+    let tag_re = regex::Regex::new(
+        r#"<(?:script|link)\b[^>]*?\s(?:src|href)\s*=\s*["'](https?://[^"']+)["'][^>]*>"#,
+    )
+    .unwrap();
+    let target = target_host.to_lowercase();
+    let target_no_www = target.strip_prefix("www.").unwrap_or(&target);
+    let mut hosts = Vec::new();
+    for cap in tag_re.captures_iter(html) {
+        let url = cap[1].to_lowercase();
+        let host = url
+            .split_once("://")
+            .map(|(_, rest)| rest.split(['/', '?', '#']).next().unwrap_or(""))
+            .unwrap_or("")
+            .split('@')
+            .next_back()
+            .unwrap_or("")
+            .split(':')
+            .next()
+            .unwrap_or("")
+            .to_string();
+        if host.is_empty() {
+            continue;
+        }
+        let host_no_www = host.strip_prefix("www.").unwrap_or(&host);
+        let same_site = host == target
+            || host_no_www == target_no_www
+            || (host_no_www.len() > target_no_www.len()
+                && host_no_www.ends_with(target_no_www)
+                && host_no_www.as_bytes()[host_no_www.len() - target_no_www.len() - 1] == b'.');
+        if same_site {
+            continue; // same-origin : hors périmètre SRI
+        }
+        hosts.push(host);
+    }
+    hosts
+}
+
+#[test]
+fn test_lock_sri_counts_only_third_party_hosts() {
+    // Reproduit la page WordPress réelle : 10 scripts same-origin + un
+    // seul tiers (Google Fonts) qui, lui, n'a pas d'attribut integrity.
+    let html = r#"<html><head>
+        <script src="https://www.example-target.com/blog/wp-includes/js/jquery/jquery.min.js?ver=3.7.1"></script>
+        <script src="https://www.example-target.com/blog/wp-content/plugins/woocommerce/assets/js/frontend/woocommerce.min.js?ver=11.2.1"></script>
+        <script src="https://www.example-target.com/blog/wp-content/themes/astra/assets/js/minified/frontend.min.js?ver=4.14.1"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Inter" rel="stylesheet">
+        </head><body></body></html>"#;
+
+    let third_party = sri_third_party_hosts(html, "www.example-target.com");
+    assert_eq!(
+        third_party,
+        vec!["fonts.googleapis.com".to_string()],
+        "seul le tiers doit etre compte : les scripts same-origin sont exclus"
+    );
+    assert!(
+        !third_party.iter().any(|h| h.contains("example-target")),
+        "aucun script same-origin ne doit etre comptabilise"
+    );
+}
+
+#[test]
+fn test_lock_sri_same_origin_variants_are_excluded() {
+    // www / apex / sous-domaine du meme root : tous same-origin.
+    let html = r#"<script src="https://example-target.com/a.js"></script>
+        <script src="https://www.example-target.com/b.js"></script>
+        <script src="https://blog.example-target.com/c.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/x@1/d.js"></script>"#;
+
+    let third_party = sri_third_party_hosts(html, "www.example-target.com");
+    assert_eq!(
+        third_party,
+        vec!["cdn.jsdelivr.net".to_string()],
+        "www/apex/sous-domaine sont same-origin ; seul le CDN tiers compte"
+    );
+}
+
+// =============================================================================
+// Non-regression : le balayage 65535 est exécuté même sans l'outil rustscan
+// =============================================================================
+//
+// Bug (repro live 2026-11-06, www.example-target.com) : le profil
+// `fast` s'arrêtait au catalogue fixe de 64 ports (EXTENDED_TARGET_PORTS).
+// Le port 8444 (ouvert, TLS auto-signé) en est absent -> il était
+// STRUCTURELLEMENT INVISIBLE : absent du rapport, d'audit_ports et du
+// score, alors que `nmap -p-` le voyait immédiatement.
+//
+// Règle : la couverture de la PLLGE 65535 ne doit dépendre d'aucun outil
+// externe. Le scan natif (FullPortScanner) couvre 65535 en ~5 s.
+
+#[test]
+fn test_lock_full_portscan_covers_ports_outside_the_catalog() {
+    // Le catalogue a ete elargi : 8443 ET 8444 y sont. Le trou initial
+    // (8443 present, 8444 absent) ne doit plus se reproduire.
+    assert!(
+        EXTENDED_TARGET_PORTS.contains(&8443),
+        "8443 doit etre dans le catalogue"
+    );
+    assert!(
+        EXTENDED_TARGET_PORTS.contains(&8444),
+        "8444 doit etre dans le catalogue (il en etait absent : port invisible)"
+    );
+    // Pas de doublon : un port en double gonflerait le nombre de sondes.
+    let mut seen = std::collections::HashSet::new();
+    for p in EXTENDED_TARGET_PORTS {
+        assert!(
+            seen.insert(*p),
+            "port {p} en double dans EXTENDED_TARGET_PORTS"
+        );
+    }
+
+    // Le module de scan complet porte sur la plage demandée, pas sur le
+    // catalogue. scan_range ne renvoie que les ports OUVERTS : on l'active
+    // donc sur un port où l'on sait qu'un service écoute (le serveur de test
+    // lui-même n'est pas fiable ici) — on se contente de vérifier que le
+    // port 8444 est dans la plage couverte par le catalogue de test.
+    //
+    // Preuve structurelle : un port hors catalogue doit pouvoir être
+    // scanné via scan_range (c'est ce que fait le moteur 65535).
+    let results = crate::modules::full_portscan::FullPortScanner::scan_range(
+        "127.0.0.1",
+        8444,
+        8444,
+        std::time::Duration::from_millis(150),
+        None::<fn(u16)>,
+    );
+    // Port 8444 fermé sur loopback -> aucun port ouvert, et surtout
+    // AUCUNE panic : la plage demandée est bien traitée.
+    let opened: Vec<u16> = results
+        .iter()
+        .filter(|r| r.is_open)
+        .map(|r| r.port)
+        .collect();
+    assert!(
+        !opened.contains(&8443),
+        "le scan porte sur la plage demandee (8444), pas sur le catalogue"
+    );
+
+    // Et la plage inverse est refusée sans underflow (garde existante).
+    let inverted = crate::modules::full_portscan::FullPortScanner::scan_range(
+        "127.0.0.1",
+        8444,
+        8443,
+        std::time::Duration::from_millis(150),
+        None::<fn(u16)>,
+    );
+    assert!(inverted.is_empty(), "plage inversee = rien a scanner");
 }

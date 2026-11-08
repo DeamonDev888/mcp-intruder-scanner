@@ -469,19 +469,31 @@ impl AuditOrchestrator {
             None
         };
 
-        // RustScan : balayage de TOUS les ports (65535). Si le binaire rustscan
-        // est absent, FALLBACK natif FullPortScanner (TCP connect async, pool
-        // de 128 workers) : --rustscan garantit désormais la couverture
-        // complète même sans l'outil externe.
+        // Balayage de TOUS les ports (65535) — NATIF FullPortScanner
+        // (TCP connect async, pool de 128 workers, ~5 s sur une cible
+        // joignable, bail-out live si la cible drop les SYN).
+        //
+        // Ce balayage reste conditionné à `config.tools.rustscan` (profils
+        // `infra` et `full`) : après la correction du bail-out (un hôte qui
+        // a répondu sur au moins un port n'est PAS un blackhole), un balayage
+        // complet prend ~5 min sur un VPS à pare-feu strict (2 passes ×
+        // 65535 ports × 300 ms / 128 workers). L'imposer au profil `fast`
+        // rendrait chaque scan interminable.
+        //
+        // Les profils rapides ne perdent pas de ports : le catalogue fixe
+        // (EXTENDED_TARGET_PORTS) a été élargi aux bandes de services
+        // réalistes (alt-HTTPS 8000-10000, panels 2082-2096…) — il contenait
+        // 8443 mais PAS 8444, d'où un port ouvert invisible alors que
+        // `nmap -p-` le voyait immédiatement.
         let handle_rustscan = if let Some(idx) = idx_rustscan {
             let tracker_c = Arc::clone(&tracker);
             let t = target.clone();
             Some(thread::spawn(move || {
                 let t0 = Instant::now();
                 tracker_c.set_running(idx, "Balayage des 65535 ports...");
-                run_guarded(t0, &tracker_c, idx, "RustScan", || {
+                run_guarded(t0, &tracker_c, idx, "PortScan 65535", || {
                     // NATIF en priorité : TCP connect 128 workers, déterministe
-                    // (rustscan externe s est montré non-déterministe : ports
+                    // (rustscan externe s'est montré non-déterministe : ports
                     // sautés selon les runs). Le natif couvre les 65535 en ~5 s.
                     let start = Instant::now();
                     // Timeout reduit (etait 1200ms = bloquait 60s+ sur cible
@@ -494,7 +506,7 @@ impl AuditOrchestrator {
                     );
                     let mut open_ports: Vec<u16> = results.iter().map(|r| r.port).collect();
                     let elapsed = start.elapsed().as_millis() as u64;
-                    // Secours rustscan si le natif n a rien vu mais que l hôte
+                    // Secours rustscan si le natif n'a rien vu mais que l'hôte
                     // répond ailleurs (parano double-check, aucun coût si vide)
                     if open_ports.is_empty() && RustScanWrapper::is_available() {
                         if let Ok(rs) = RustScanWrapper::scan_ports(&t, 3) {

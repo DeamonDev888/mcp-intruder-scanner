@@ -4,6 +4,53 @@ Toutes les modifications notables de `mcp_intruder` sont documentées ici.
 
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [0.6.11] — 2026-11-06
+
+### Fixed
+- **Audit HTTP : les en-têtes de sécurité sont lus sur la réponse TLS.** Le module
+  interrogeait d'abord le port 80 en cleartext et analysait la réponse `301 Moved
+  Permanently` de nginx (169 octets, aucun en-tête de sécurité). Il concluait donc
+  « X-Frame-Options manquant » (MEDIUM) et « HSTS non évaluable » sur des cibles
+  parfaitement durcies, avec un score effondré à 5 %. Le candidat TLS est
+  maintenant le port **443** (et non le port HTTP 80 que `split_host_port`
+  renvoie par défaut), et le cleartext n'est lu qu'en repli.
+- **Un en-tête absent d'une réponse CLEARTEXT n'est plus compté comme manquant** :
+  absence = `NON_EVALUABLE` (aucun finding) au lieu de `MISSING`. Une redirection
+  30x ne dit rien du durcissement de la réponse TLS.
+- **Contrôle SRI : seules les ressources TIERCES sont comptées.** Le contrôle
+  comparait l'hôte de chaque URL à celui de la cible : les scripts same-origin
+  d'un WordPress (`wp-includes`, `wp-content/plugins`) étaient comptés comme
+  « scripts externes sans SRI » (MEDIUM) alors que SRI ne les concerne pas. La
+  comparaison se fait par suffixe **sur frontière de label** (`blog.exemple.com`
+  est same-origin de `www.exemple.com`, mais `pasunexemple.com` ne l'est pas).
+- **Bail-out anti-blackhole : un pare-feu strict n'est plus confondu avec un
+  hôte muet.** Le bail-out se déclenchait sur le **ratio de timeouts** (≥ 98 %).
+  Or un VPS à pare-feu strict (OWH, nftables DROP) renvoie un *timeout* — et non
+  un RST — sur tous les ports non exposés : le ratio monte très vite
+  (6429 timeouts / 6560 sondes) alors que la cible répond sur 22/80/443/8443/8444.
+  Le scan s'interrompait au port ~6560 et **les ports 8443 et 8444 n'étaient
+  jamais sondés** — invisibles au rapport alors que `nmap -p-` les voyait.
+  Le bail-out ne se déclenche plus que si **zéro port n'a répondu** (vrai
+  blackhole) ; un hôte qui a répondu sur au moins un port voit désormais sa
+  plage entière balayée.
+- **Catalogue de ports élargi (64 → 173 ports uniques).** Le catalogue listait
+  8443 mais **pas 8444** : un port ouvert hors catalogue était invisible pour
+  les profils qui ne balayent pas les 65535 ports. Les bandes de services
+  réalistes sont maintenant couvertes (alt-HTTPS, panels mutualisés
+  cPanel/WHM/Plesk/Webmin, consoles d'observabilité).
+
+### Changed
+- **Le balayage des 65535 ports reste réservé aux profils `infra` et `full`.**
+  Après la correction du bail-out, une passe complète prend ~5 min sur un VPS à
+  pare-feu strict (2 passes × 65535 ports × 300 ms / 128 workers) : l'imposer au
+  profil `fast` rendrait chaque scan interminable. Les profils rapides ne
+  perdent pas de ports — le catalogue élargi couvre désormais les bandes de
+  services réalistes.
+- **Service systemd `mcp-intruder`** : `ExecStart` pointe désormais sur
+  `/usr/local/bin/mcp_intruder_server` (le binaire renommé en 0.6.10) au lieu de
+  `/usr/local/bin/mcp_server`, qui ne correspondait plus à aucun artefact
+  produit par les sources.
+
 ## [0.6.10] — 2026-11-05
 
 ### Changed

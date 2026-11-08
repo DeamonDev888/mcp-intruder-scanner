@@ -80,6 +80,14 @@ impl FullPortScanner {
         let probed = Arc::new(AtomicU64::new(0));
         let timeouts = Arc::new(AtomicU64::new(0));
         let blackhole_flag = Arc::new(AtomicU64::new(0)); // 0=inconnu 1=blackhole
+                                                          // Ports ouverts trouves jusqu'ici : un blackhole REEL est un hote
+                                                          // muet (zero port ouvert). Un pare-feu strict renvoie des timeouts
+                                                          // sur tous les ports non exposes MAIS laisse passer les services
+                                                          // reels : le ratio de timeouts est alors eleve SANS que la cible
+                                                          // soit muette. On compte les ouverts pour ne pas confondre les deux
+                                                          // (bug live 2026-11-06 sur 51.38.227.7 : bail-out a 6560 sondes,
+                                                          // ports 8443/8444 jamais sondes alors qu'ils sont ouverts).
+        let opens_found = Arc::new(AtomicU64::new(0));
 
         let worker_count = 128usize;
         let next_port = Arc::new(AtomicU64::new(start as u64));
@@ -94,6 +102,7 @@ impl FullPortScanner {
             let probed_c = Arc::clone(&probed);
             let timeouts_c = Arc::clone(&timeouts);
             let blackhole_c = Arc::clone(&blackhole_flag);
+            let opens_c = Arc::clone(&opens_found);
             handles.push(thread::spawn(move || loop {
                 let p = next.fetch_add(1, Ordering::Relaxed);
                 if p > end_atomic {
@@ -105,8 +114,13 @@ impl FullPortScanner {
                 if n.is_multiple_of(32) && blackhole_c.load(Ordering::Relaxed) == 0 {
                     let pr = probed_c.load(Ordering::Relaxed);
                     let to = timeouts_c.load(Ordering::Relaxed);
+                    // Un hote qui a deja repondu sur AU MOINS UN port n'est
+                    // PAS un blackhole : son pare-feu peut simplement etre
+                    // strict (timeout sur tout port non expose). On ne coupe
+                    // donc la passe que si ZERO port n'a repondu.
+                    let already_open = opens_c.load(Ordering::Relaxed);
                     // Seuil 98% (etait 90): notairetruchon.com drop ~95% SYN mais 6 ports cPanel repondent.
-                    if pr >= 64 && to * 100 / pr >= 98 {
+                    if pr >= 64 && to * 100 / pr >= 98 && already_open == 0 {
                         blackhole_c.store(1, Ordering::Relaxed);
                         eprintln!("[full_portscan] blackhole live-detecte ({} timeouts / {} sondes) - workers sortiront apres probe courante", to, pr);
                         // Faire en sorte que la boucle se termine bientot:
@@ -121,6 +135,7 @@ impl FullPortScanner {
                 }
                 set_state(&states, (port as usize) - (start as usize), state);
                 if state == PortState::Open {
+                    opens_c.fetch_add(1, Ordering::Relaxed);
                     if let Some(ref cb) = cb {
                         cb(port);
                     }
@@ -135,9 +150,12 @@ impl FullPortScanner {
         // si >90% des premieres 256 probes tombent en Timeout, sortie immediate
         let probed_now = probed.load(Ordering::Relaxed);
         let timeouts_now = timeouts.load(Ordering::Relaxed);
+        let opens_now = opens_found.load(Ordering::Relaxed);
         let blackhole_now = blackhole_flag.load(Ordering::Relaxed) == 1
-            // Filet: seuil 98 (aligne avec live-detector)
-            || (probed_now >= 256 && timeouts_now * 100 / probed_now.max(1) >= 98);
+            // Filet: seuil 98 (aligne avec live-detector). Comme pour le
+            // detecteur live, un hote qui a repondu sur au moins un port
+            // n'est PAS un blackhole : on poursuit la passe complete.
+            || (probed_now >= 256 && timeouts_now * 100 / probed_now.max(1) >= 98 && opens_now == 0);
         if blackhole_now {
             let mut results = Vec::new();
             for p in start..=end {
@@ -152,7 +170,7 @@ impl FullPortScanner {
                 }
             }
             eprintln!(
-                "[full_portscan] bail-out final: {} probes, {} timeouts, {} ouverts",
+                "[full_portscan] bail-out final: {} probes, {} timeouts, {} ouverts (blackhole reel : aucun port ouvert)",
                 probed_now,
                 timeouts_now,
                 results.len()
@@ -179,7 +197,9 @@ impl FullPortScanner {
                 }
             }
         }
-        let blackhole = probed >= 50 && (timeouts * 100 / probed.max(1)) >= 80;
+        // Meme regle : zero port ouvert sur toute la passe = blackhole reel.
+        // Sinon (pare-feu strict), on enchaîne la 2e passe sur les timeouts.
+        let blackhole = probed >= 50 && (timeouts * 100 / probed.max(1)) >= 80 && opens_now == 0;
         if blackhole {
             eprintln!("[full_portscan] blackhole detecte ({} timeouts sur {} sondes) - bail-out, skip 2e passe", timeouts, probed);
             let mut results = Vec::new();
